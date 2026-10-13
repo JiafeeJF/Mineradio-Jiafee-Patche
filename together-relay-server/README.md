@@ -1,6 +1,16 @@
 # Mineradio 一起听中转服务
 
-这是与 Jiafee-FX-Patch 2.3.0 一起听模块兼容的独立服务端。一台容器代表一个双人房间，双方在补丁器中输入相同的服务器 `IP:端口` 和 6 位授权码即可连接。
+这是与 Jiafee-FX-Patch 2.3.0 一起听模块兼容的独立服务端。一台容器代表一个双人房间，双方在一起听面板中输入相同的服务器 `域名:端口`（或 `IP:端口`）和 6 位授权码即可连接，无需填写 `wss://`。
+
+## 使用域名直接连接
+
+1. 将域名的 DNS A 记录指向服务器公网 IP。使用带 CDN 的 DNS 服务时，该记录需使用仅 DNS 解析模式，或配置支持原生 TCP 的转发服务。
+2. 将 Docker 的 TCP 端口映射到服务器，并在防火墙及云安全组中允许该端口。默认是 `17861/tcp`。
+3. 双方都选择“加入服务器”，填写 `music.example.com:17861` 和部署者提供的授权码。
+
+客户端 2.3.0 已内置这种地址识别方式，会使用 Mineradio 原生 TCP 协议，无需升级客户端。裸域名后必须填写端口；不要用 `域名:443` 连接普通 HTTPS 反向代理。
+
+`PUBLIC_ADDRESS` 用于在启动日志中显示可直接复制的连接地址，例如 `music.example.com:17861`。它不自动配置 DNS 或端口转发，填写的端口应与 `PUBLIC_PORT` 一致。
 
 服务端维护权威播放状态并中转播放、暂停、切歌、进度、队列、头像和文字互动数据。它不传输歌曲音频，不提供音乐资源，不接触音乐平台账号，也不把房间数据写入磁盘。容器重启后会话随即清空。
 
@@ -12,7 +22,7 @@
 cp .env.example .env
 ```
 
-编辑 `.env`，至少把 `AUTHORIZATION_CODE` 换成你自己的 6 位数字。然后启动：
+编辑 `.env`，把 `AUTHORIZATION_CODE` 换成你自己的 6 位数字，将 `PUBLIC_ADDRESS` 改成自己的 `域名:端口`（不用域名时可填写公网 IP:端口或留空）。然后启动：
 
 ```bash
 docker compose up -d --build
@@ -50,6 +60,7 @@ docker run -d --name mineradio-together-relay --restart unless-stopped \
 | --- | --- | --- |
 | `PORT` | `17861` | 容器内 TCP 监听端口 |
 | `PUBLIC_PORT` | `17861` | Compose 映射到宿主机的端口 |
+| `PUBLIC_ADDRESS` | 空 | 启动日志显示的 `域名:端口` 或 `IP:端口`，不改变监听地址 |
 | `ROOM_NAME` | `Mineradio 一起听中转` | 客户端探测时显示的名称 |
 | `AUTHORIZATION_CODE` | 无 | 必填，必须为 6 位数字 |
 | `ALLOW_LAN_WITHOUT_AUTH` | `false` | 是否允许私网来源免授权码；公网部署建议保持关闭 |
@@ -68,7 +79,6 @@ docker run -d --name mineradio-together-relay --restart unless-stopped \
 ## 更新与停止
 
 ```bash
-docker compose pull
 docker compose up -d --build
 docker compose down
 ```

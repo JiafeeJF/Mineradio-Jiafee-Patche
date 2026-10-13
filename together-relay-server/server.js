@@ -36,6 +36,15 @@ const name = String(process.env.ROOM_NAME || 'Mineradio 一起听中转').trim()
 const authorizationCode = String(process.env.AUTHORIZATION_CODE || '').trim();
 const allowLanWithoutAuthorization = booleanEnv('ALLOW_LAN_WITHOUT_AUTH', false);
 const debug = booleanEnv('DEBUG', false);
+// Display-only public endpoint; the socket continues to bind HOST:PORT.
+const publicAddress = String(process.env.PUBLIC_ADDRESS || '').trim();
+if (publicAddress) {
+  const match = publicAddress.match(/^(\[[0-9a-f:]+\]|[a-z0-9.-]+):(\d{1,5})$/i);
+  if (!match || Number(match[2]) < 1 || Number(match[2]) > 65535) {
+    console.error('[relay] PUBLIC_ADDRESS must be a domain:port or IP:port without a URL scheme.');
+    process.exit(1);
+  }
+}
 
 if (!/^\d{6}$/.test(authorizationCode)) {
   console.error('[relay] AUTHORIZATION_CODE must contain exactly 6 digits.');
@@ -86,6 +95,7 @@ process.on('unhandledRejection', (error) => {
 service.start().then((address) => {
   console.info(`[relay] ${name}`);
   console.info(`[relay] listening on ${address.host}:${address.port}/tcp`);
+  console.info(`[relay] join address: ${publicAddress || `<server-domain-or-ip>:${address.port}`} (native TCP; no ws:// or wss:// prefix needed)`);
   console.info(`[relay] authorization: required${allowLanWithoutAuthorization ? ' (LAN bypass enabled)' : ''}`);
   console.info('[relay] capacity: 2 clients; persistence: disabled; audio transport: disabled');
 }).catch((error) => {

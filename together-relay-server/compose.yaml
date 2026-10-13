@@ -10,6 +10,7 @@ services:
       - "${PUBLIC_PORT:-17861}:17861/tcp"
     environment:
       PORT: "17861"
+      PUBLIC_ADDRESS: "${PUBLIC_ADDRESS:-}"
       ROOM_NAME: "${ROOM_NAME:-Mineradio 一起听中转}"
       AUTHORIZATION_CODE: "${AUTHORIZATION_CODE:?请在 .env 中设置 6 位授权码}"
       ALLOW_LAN_WITHOUT_AUTH: "${ALLOW_LAN_WITHOUT_AUTH:-false}"
