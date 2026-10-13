@@ -1,0 +1,33 @@
+# Dependencies and package-manager caches
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+
+# Build output and downloaded runtimes
+dist/
+.electron-cache/
+demo-video/out/
+demo-video/.cache/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Test and coverage output
+coverage/
+.nyc_output/
+
+# OS and editor metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

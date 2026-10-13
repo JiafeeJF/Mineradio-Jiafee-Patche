@@ -1,0 +1,570 @@
+/* ========================================================================
+   Jiafee CoPlay v2 styling
+   ------------------------------------------------------------
+   Tuned to feel closer to Mineradio's native chrome:
+   - subdued dark glass
+   - thin hairline borders
+   - low-contrast text hierarchy
+   - compact button geometry and radio-like pills
+   ======================================================================== */
+
+:root {
+  --coplay-bg: rgba(14, 16, 22, 0.92);
+  --coplay-bg-2: rgba(18, 20, 28, 0.92);
+  --coplay-line: rgba(255, 255, 255, 0.08);
+  --coplay-line-strong: rgba(157, 184, 207, 0.18);
+  --coplay-text: rgba(238, 244, 255, 0.90);
+  --coplay-text-dim: rgba(238, 244, 255, 0.58);
+  --coplay-text-faint: rgba(238, 244, 255, 0.44);
+  --coplay-accent: rgba(157, 184, 207, 0.24);
+  --coplay-accent-strong: rgba(124, 240, 191, 0.22);
+  --coplay-ok: #7cf0bf;
+  --coplay-warn: #ffd27a;
+  --coplay-bad: #ff8b8b;
+}
+
+/* ---------------------------------------------------------------------
+   Root host
+   --------------------------------------------------------------------- */
+.coplay2-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 4px;
+  color: var(--coplay-text);
+}
+
+/* Keep the outer shell transparent; the inner button becomes native-ish */
+#coplay2-btn {
+  position: relative;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+/* ---------------------------------------------------------------------
+   Titlebar mount: match `.desktop-mode-btn`
+   --------------------------------------------------------------------- */
+.coplay2-control.mount-titlebar #coplay2-btn {
+  width: auto;
+  min-width: 62px;
+  height: 30px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.coplay2-control.mount-titlebar #coplay2-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+.coplay2-control.mount-titlebar #coplay2-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+.coplay2-control.mount-titlebar #coplay2-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.coplay2-control.mount-titlebar #coplay2-dot {
+  width: 6px;
+  height: 6px;
+  margin-left: 2px;
+}
+
+/* ---------------------------------------------------------------------
+   Transport mount: match `.ctrl-btn`
+   --------------------------------------------------------------------- */
+.coplay2-control.mount-transport #coplay2-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.70);
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.coplay2-control.mount-transport #coplay2-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.045);
+  transform: translateY(-1px);
+  text-shadow: 0 0 10px rgba(0, 245, 212, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+.coplay2-control.mount-transport #coplay2-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+.coplay2-control.mount-transport #coplay2-btn svg {
+  width: 21px;
+  height: 21px;
+}
+.coplay2-control.mount-transport #coplay2-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+}
+
+/* ---------------------------------------------------------------------
+   Float mount: draggable orb pinned to the bottom-right corner
+   --------------------------------------------------------------------- */
+.coplay2-control.mount-float {
+  position: fixed;
+  right: 20px;
+  bottom: 116px;
+  left: auto;
+  top: auto;
+  transform: none;
+  z-index: 10000;
+  pointer-events: auto;
+}
+.coplay2-control.mount-float,
+.coplay2-control.mount-float * {
+  pointer-events: auto;
+}
+.coplay2-control.mount-float #coplay2-btn {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(18, 20, 26, 0.86);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.coplay2-control.mount-float #coplay2-btn:hover {
+  background: rgba(30, 34, 44, 0.94);
+  border-color: rgba(124, 240, 191, 0.30);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.48);
+}
+.coplay2-control.mount-float #coplay2-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+.coplay2-control.mount-float #coplay2-btn svg {
+  width: 22px;
+  height: 22px;
+}
+.coplay2-control.mount-float #coplay2-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+}
+
+/* ---------------------------------------------------------------------
+   Shared status dot
+   --------------------------------------------------------------------- */
+#coplay2-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+#coplay2-dot.status-connected {
+  background: var(--coplay-ok);
+  box-shadow: 0 0 0 2px rgba(124, 240, 191, 0.18), 0 0 10px rgba(124, 240, 191, 0.52);
+}
+#coplay2-dot.status-connecting,
+#coplay2-dot.status-waiting {
+  background: var(--coplay-warn);
+  box-shadow: 0 0 0 2px rgba(255, 210, 122, 0.18);
+}
+#coplay2-dot.status-idle {
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------
+   Popover panel: compact Mineradio-style playback menu
+   --------------------------------------------------------------------- */
+.coplay2-popover.quality-popover {
+  width: 320px;
+  min-width: 320px;
+  padding: 10px;
+  gap: 8px;
+  background: linear-gradient(180deg, rgba(12, 14, 19, 0.99), rgba(15, 17, 23, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.56), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 9999;
+}
+
+/* Override host page's hover-based visibility. */
+.coplay2-control .coplay2-popover.quality-popover {
+  display: grid !important;
+  grid-auto-rows: min-content;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(6px) scale(0.99) !important;
+  transform-origin: top right !important;
+  transition: opacity 0.16s ease, transform 0.20s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.16s !important;
+}
+.coplay2-control.open .coplay2-popover.quality-popover {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+  transition: opacity 0.16s ease, transform 0.20s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s !important;
+}
+
+/* Positioning modes for popover — reset Mineradio's `.quality-popover` default
+   but WITHOUT `!important` on left/right/top/bottom so the JS can set them. */
+.coplay2-control.mount-titlebar .coplay2-popover.quality-popover,
+.coplay2-control.mount-transport .coplay2-popover.quality-popover,
+.coplay2-control.mount-float .coplay2-popover.quality-popover {
+  position: fixed !important;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+}
+
+/* ---------------------------------------------------------------------
+   Head
+   --------------------------------------------------------------------- */
+.coplay2-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 1px 1px;
+}
+.coplay2-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.28px;
+  color: rgba(237, 245, 255, 0.90);
+}
+.coplay2-status-pill {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.25px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.58);
+}
+.coplay2-status-pill.status-connected {
+  background: rgba(124, 240, 191, 0.14);
+  color: #c9f8e2;
+}
+.coplay2-status-pill.status-waiting,
+.coplay2-status-pill.status-connecting {
+  background: rgba(255, 210, 122, 0.14);
+  color: #ffe0a6;
+}
+.coplay2-status-pill.status-idle {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.58);
+}
+
+/* ---------------------------------------------------------------------
+   Buttons
+   --------------------------------------------------------------------- */
+.coplay2-btn {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(157, 184, 207, 0.20);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(237, 245, 255, 0.85);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.18px;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease, transform 0.14s ease;
+}
+.coplay2-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(157, 184, 207, 0.34);
+  color: #fff;
+}
+.coplay2-btn.primary {
+  background: linear-gradient(135deg, rgba(124, 240, 191, 0.16), rgba(157, 184, 207, 0.16));
+  border-color: rgba(124, 240, 191, 0.30);
+  color: #f2f8ff;
+}
+.coplay2-btn.primary:hover {
+  background: linear-gradient(135deg, rgba(124, 240, 191, 0.24), rgba(157, 184, 207, 0.22));
+}
+.coplay2-btn.danger {
+  background: rgba(255, 139, 139, 0.09);
+  border-color: rgba(255, 139, 139, 0.26);
+  color: #ffdada;
+}
+.coplay2-btn.danger:hover {
+  background: rgba(255, 139, 139, 0.16);
+}
+.coplay2-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---------------------------------------------------------------------
+   Host info card (waiting pane)
+   --------------------------------------------------------------------- */
+.coplay2-host-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(124, 240, 191, 0.07), rgba(157, 184, 207, 0.05));
+  border: 1px solid rgba(124, 240, 191, 0.18);
+  font-size: 10.5px;
+  color: var(--coplay-text);
+  line-height: 1.45;
+}
+.coplay2-host-info .coplay2-host-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.coplay2-host-info .coplay2-host-line .k {
+  flex: 0 0 48px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--coplay-text-dim);
+  letter-spacing: 0.15px;
+}
+.coplay2-host-info .coplay2-host-line .v {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--coplay-text);
+  word-break: break-all;
+}
+.coplay2-host-info .coplay2-host-line .v.code {
+  font-family: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  color: #c9f8e2;
+}
+.coplay2-host-info .coplay2-host-tip {
+  margin-top: 2px;
+  padding-top: 5px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  font-size: 9.5px;
+  color: rgba(238, 244, 255, 0.56);
+  line-height: 1.45;
+}
+.coplay2-host-info .coplay2-host-tip code {
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-family: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color: #ffe0a6;
+}
+
+/* ---------------------------------------------------------------------
+   Toast
+   --------------------------------------------------------------------- */
+.coplay2-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 40px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(18, 20, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(237, 245, 255, 0.88);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  z-index: 10002;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+  animation: coplay2-toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.coplay2-toast.out {
+  animation: coplay2-toast-out 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes coplay2-toast-in {
+  0%   { transform: translateX(-50%) translateY(12px); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+@keyframes coplay2-toast-out {
+  0%   { transform: translateX(-50%) translateY(0); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-12px); opacity: 0; }
+}
+
+/* ---------------------------------------------------------------------
+   Small polish for mount-specific popover layout
+   --------------------------------------------------------------------- */
+.coplay2-control.mount-titlebar .coplay2-popover.quality-popover {
+  transform: translateY(6px) !important;
+  transform-origin: top right !important;
+}
+.coplay2-control.mount-titlebar.open .coplay2-popover.quality-popover {
+  transform: translateY(0) !important;
+}
+.coplay2-control.mount-transport .coplay2-popover.quality-popover,
+.coplay2-control.mount-float .coplay2-popover.quality-popover {
+  transform: translateY(6px) !important;
+  transform-origin: center !important;
+}
+.coplay2-control.mount-transport.open .coplay2-popover.quality-popover,
+.coplay2-control.mount-float.open .coplay2-popover.quality-popover {
+  transform: translateY(0) !important;
+}
+
+/* ---------------------------------------------------------------------
+   Simplified panel: create / LAN rooms / manual join / session
+   --------------------------------------------------------------------- */
+.coplay2-popover.quality-popover {
+  width: 400px;
+  min-width: 400px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+.coplay2-pane-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.coplay2-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.coplay2-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--coplay-text-dim);
+  letter-spacing: 0.2px;
+}
+.coplay2-text-btn {
+  border: 0;
+  background: transparent;
+  color: var(--coplay-accent-strong);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.coplay2-text-btn:hover { color: var(--coplay-ok); background: rgba(255, 255, 255, 0.05); }
+.coplay2-lan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 172px;
+  overflow-y: auto;
+}
+.coplay2-lan-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--coplay-line);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--coplay-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.coplay2-lan-item:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(124, 240, 191, 0.28); }
+.coplay2-lan-name { font-size: 11px; font-weight: 800; }
+.coplay2-lan-sub { font-size: 9.5px; color: var(--coplay-text-faint); font-weight: 700; letter-spacing: 0.1px; }
+.coplay2-empty {
+  font-size: 10px;
+  color: var(--coplay-text-faint);
+  padding: 8px 4px;
+  text-align: center;
+}
+.coplay2-manual-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px;
+}
+.coplay2-manual-grid input {
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 8px;
+  border: 1px solid var(--coplay-line);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--coplay-text);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  outline: none;
+}
+.coplay2-manual-grid input:focus { border-color: rgba(124, 240, 191, 0.30); }
+.coplay2-session {
+  margin-top: 8px;
+  padding: 9px;
+  border-radius: 11px;
+  border: 1px solid rgba(124, 240, 191, 0.16);
+  background: rgba(124, 240, 191, 0.045);
+}
+.coplay2-session-card { display: flex; flex-direction: column; gap: 4px; }
+.coplay2-session-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.coplay2-session-row .coplay2-session-label {
+  flex: 0 0 auto;
+  font-size: 9.5px;
+  color: var(--coplay-text-faint);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.coplay2-session-row strong,
+.coplay2-session-row span:last-child {
+  font-size: 11px;
+  font-weight: 800;
+  color: #f2f8ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,167 @@
+[
+  {
+    "id": "bypass",
+    "name": "原声",
+    "shortName": "原声",
+    "tagline": "直连输出，无任何处理",
+    "category": "signature",
+    "bypass": true
+  },
+  {
+    "id": "mine-signature",
+    "name": "JIAFEE 招牌",
+    "shortName": "JF",
+    "tagline": "三频均衡、微宽而不刺，日常首选",
+    "category": "signature",
+    "input": { "trimDb": -0.5 },
+    "hp": { "freq": 28, "Q": 0.5 },
+    "eq": [
+      { "type": "lowshelf",  "freq": 85,    "gainDb": 1.5 },
+      { "type": "peaking",   "freq": 320,   "gainDb": -0.8, "Q": 1.0 },
+      { "type": "peaking",   "freq": 2500,  "gainDb": 1.0,  "Q": 1.1 },
+      { "type": "highshelf", "freq": 12000, "gainDb": 1.2 }
+    ],
+    "widener": { "amount": 0.18 },
+    "deEsser": { "thresholdDb": -22, "freq": 6800, "Q": 3.0, "maxReductionDb": -6, "attackMs": 2.5, "releaseMs": 60 },
+    "compressor": { "threshold": -20, "knee": 18, "ratio": 1.8, "attack": 0.018, "release": 0.220, "makeupDb": 0.8 },
+    "output": { "trimDb": -1.0 }
+  },
+  {
+    "id": "mine-deep-bass",
+    "name": "深渊低音",
+    "shortName": "深音",
+    "tagline": "厚实的低频，鼓与贝斯有拳头感",
+    "category": "tone",
+    "input": { "trimDb": -3.0 },
+    "hp": { "freq": 28, "Q": 0.6 },
+    "eq": [
+      { "type": "peaking",   "freq": 45,    "gainDb": 3.5,  "Q": 1.0 },
+      { "type": "peaking",   "freq": 75,    "gainDb": 2.5,  "Q": 1.1 },
+      { "type": "lowshelf",  "freq": 100,   "gainDb": 7.0 },
+      { "type": "peaking",   "freq": 200,   "gainDb": -3.5, "Q": 1.1 },
+      { "type": "peaking",   "freq": 450,   "gainDb": -1.6, "Q": 1.4 },
+      { "type": "peaking",   "freq": 3200,  "gainDb": 0.8,  "Q": 1.0 }
+    ],
+    "deEsser": { "thresholdDb": -20, "freq": 7000, "Q": 3.0, "maxReductionDb": -4, "attackMs": 3, "releaseMs": 80 },
+    "compressor": { "threshold": -22, "knee": 14, "ratio": 3.0, "attack": 0.008, "release": 0.180, "makeupDb": 1.5 },
+    "output": { "trimDb": -5.0 }
+  },
+  {
+    "id": "mine-vocal-focus",
+    "name": "人声聚焦",
+    "shortName": "人焦",
+    "tagline": "中频通透、齿音克制，人声上前一步",
+    "category": "tone",
+    "hp": { "freq": 80, "Q": 0.7 },
+    "eq": [
+      { "type": "peaking",   "freq": 200,   "gainDb": -2.0, "Q": 1.0 },
+      { "type": "peaking",   "freq": 350,   "gainDb": -1.0, "Q": 1.4 },
+      { "type": "peaking",   "freq": 1200,  "gainDb": 2.0,  "Q": 1.2 },
+      { "type": "peaking",   "freq": 2800,  "gainDb": 2.4,  "Q": 1.4 },
+      { "type": "highshelf", "freq": 11000, "gainDb": 0.8 }
+    ],
+    "deEsser": { "thresholdDb": -24, "freq": 6500, "Q": 3.4, "maxReductionDb": -8, "attackMs": 2, "releaseMs": 55 },
+    "compressor": { "threshold": -22, "knee": 16, "ratio": 2.2, "attack": 0.014, "release": 0.220, "makeupDb": 1.2 },
+    "output": { "trimDb": -0.8 }
+  },
+  {
+    "id": "mine-crystal-hifi",
+    "name": "水晶三频",
+    "shortName": "水频",
+    "tagline": "干净、宽松、细节丰富，HiFi 走向",
+    "category": "signature",
+    "hp": { "freq": 25, "Q": 0.5 },
+    "eq": [
+      { "type": "lowshelf",  "freq": 70,    "gainDb": 1.3 },
+      { "type": "peaking",   "freq": 250,   "gainDb": -0.8, "Q": 1.2 },
+      { "type": "peaking",   "freq": 1800,  "gainDb": 0.6,  "Q": 1.0 },
+      { "type": "peaking",   "freq": 5000,  "gainDb": 1.0,  "Q": 1.1 },
+      { "type": "highshelf", "freq": 12500, "gainDb": 1.6 }
+    ],
+    "widener": { "amount": 0.20 },
+    "deEsser": { "thresholdDb": -22, "freq": 7200, "Q": 3.0, "maxReductionDb": -5, "attackMs": 2.5, "releaseMs": 65 },
+    "compressor": { "threshold": -24, "knee": 20, "ratio": 1.6, "attack": 0.020, "release": 0.260, "makeupDb": 0.6 },
+    "output": { "trimDb": -0.6 }
+  },
+  {
+    "id": "mine-studio-room",
+    "name": "近场录音室",
+    "shortName": "近室",
+    "tagline": "紧凑的房间早反射，如坐监听音箱前",
+    "category": "spatial",
+    "eq": [
+      { "type": "peaking",   "freq": 280,   "gainDb": -1.0, "Q": 1.0 },
+      { "type": "peaking",   "freq": 4000,  "gainDb": 1.0,  "Q": 1.0 }
+    ],
+    "reverb": { "decaySec": 0.32, "preDelayMs": 5, "dampHz": 6500, "wetDb": -14, "dryDb": 0, "stereoSpread": 0.30 },
+    "widener": { "amount": 0.18 },
+    "deEsser": { "thresholdDb": -22, "freq": 6800, "Q": 3.0, "maxReductionDb": -5, "attackMs": 2.5, "releaseMs": 60 },
+    "compressor": { "threshold": -22, "knee": 18, "ratio": 1.8, "attack": 0.016, "release": 0.220, "makeupDb": 0.8 },
+    "output": { "trimDb": -0.6 }
+  },
+  {
+    "id": "mine-concert-hall",
+    "name": "云端音乐厅",
+    "shortName": "云厅",
+    "tagline": "宽阔大厅混响，声音在头顶展开",
+    "category": "spatial",
+    "eq": [
+      { "type": "peaking",   "freq": 240,   "gainDb": -1.5, "Q": 1.1 },
+      { "type": "highshelf", "freq": 10000, "gainDb": 1.0 }
+    ],
+    "reverb": { "decaySec": 2.6, "preDelayMs": 45, "dampHz": 7500, "wetDb": -10, "dryDb": -1.5, "stereoSpread": 0.6 },
+    "widener": { "amount": 0.30 },
+    "compressor": { "threshold": -22, "knee": 20, "ratio": 1.6, "attack": 0.022, "release": 0.320, "makeupDb": 0.8 },
+    "output": { "trimDb": -1.4 }
+  },
+  {
+    "id": "mine-cathedral",
+    "name": "神域教堂",
+    "shortName": "神堂",
+    "tagline": "超长空间尾音，神圣、悠远、缓慢",
+    "category": "spatial",
+    "eq": [
+      { "type": "peaking",   "freq": 320,   "gainDb": -2.5, "Q": 1.0 },
+      { "type": "highshelf", "freq": 8000,  "gainDb": -1.6 }
+    ],
+    "reverb": { "decaySec": 5.0, "preDelayMs": 70, "dampHz": 5000, "wetDb": -7, "dryDb": -2.8, "stereoSpread": 0.7 },
+    "widener": { "amount": 0.35 },
+    "compressor": { "threshold": -24, "knee": 22, "ratio": 1.5, "attack": 0.026, "release": 0.380, "makeupDb": 0.8 },
+    "output": { "trimDb": -2.0 }
+  },
+  {
+    "id": "mine-live-house",
+    "name": "地下 Live",
+    "shortName": "地L",
+    "tagline": "近距离现场，人潮涌动的躁动感",
+    "category": "spatial",
+    "eq": [
+      { "type": "lowshelf",  "freq": 90,    "gainDb": 2.2 },
+      { "type": "peaking",   "freq": 350,   "gainDb": -1.0, "Q": 1.1 },
+      { "type": "peaking",   "freq": 1500,  "gainDb": 1.6, "Q": 1.1 },
+      { "type": "peaking",   "freq": 5000,  "gainDb": 1.8, "Q": 1.2 }
+    ],
+    "reverb": { "decaySec": 1.4, "preDelayMs": 22, "dampHz": 6800, "wetDb": -11, "dryDb": 0, "stereoSpread": 0.5 },
+    "widener": { "amount": 0.35 },
+    "deEsser": { "thresholdDb": -20, "freq": 7000, "Q": 3.0, "maxReductionDb": -5, "attackMs": 2.5, "releaseMs": 60 },
+    "compressor": { "threshold": -18, "knee": 14, "ratio": 2.4, "attack": 0.010, "release": 0.180, "makeupDb": 1.0 },
+    "output": { "trimDb": -1.4 }
+  },
+  {
+    "id": "mine-8d-surround",
+    "name": "8D 环绕",
+    "shortName": "8D",
+    "tagline": "声源绕头三维旋转，戴耳机体验最佳",
+    "category": "spatial",
+    "input": { "trimDb": -1.5 },
+    "eq": [
+      { "type": "peaking",   "freq": 220,   "gainDb": -0.5, "Q": 1.0 },
+      { "type": "peaking",   "freq": 3500,  "gainDb": 2.2,  "Q": 1.1 },
+      { "type": "peaking",   "freq": 6500,  "gainDb": 2.4,  "Q": 1.0 },
+      { "type": "highshelf", "freq": 10000, "gainDb": 3.5 }
+    ],
+    "reverb": { "decaySec": 1.4, "preDelayMs": 24, "dampHz": 14000, "wetDb": -18, "dryDb": 0, "stereoSpread": 0.30 },
+    "pan": { "mode": "orbit", "rateHz": 0.10, "radius": 1.2 },
+    "output": { "trimDb": -0.8 }
+  }
+]

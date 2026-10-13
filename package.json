@@ -1,0 +1,62 @@
+{
+  "name": "jiafee-fx-patcher",
+  "productName": "Mineradio 多功能补丁器",
+  "version": "2.3.0",
+  "description": "Mineradio 2.2.0 音效增强与一起听模块化注入补丁器。",
+  "author": "Jiafee",
+  "main": "desktop/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node test-together-enhancements.js && node test-multifunction.js",
+    "test:legacy": "node test-roundtrip.js && node test-sync-engine.js",
+    "build:win": "electron-builder --win nsis",
+    "build:win:dir": "electron-builder --win dir"
+  },
+  "build": {
+    "appId": "com.jiafee.fxpatch",
+    "productName": "Mineradio 多功能补丁器",
+    "electronDist": ".electron-cache/electron-v42.8.0-win32-x64",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "desktop/**/*",
+      "payload/**/*",
+      "build/**/*",
+      "patch-manifest*.json",
+      "test-multifunction.js",
+      "icon.ico",
+      "icon.png",
+      "package.json"
+    ],
+    "asar": false,
+    "win": {
+      "executableName": "Jiafee-FX-Patch",
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Jiafee FX Patch",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "Jiafee-FX-Patch-${version}-Setup.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3"
+  }
+}

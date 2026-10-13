@@ -1,0 +1,9 @@
+**
+!together-relay-server/
+!together-relay-server/package.json
+!together-relay-server/server.js
+!together-relay-server/healthcheck.js
+!payload/
+!payload/desktop/
+!payload/desktop/together-listen/
+!payload/desktop/together-listen/**

@@ -1,0 +1,52 @@
+{
+  "name": "Mineradio Together Listen",
+  "displayName": "一起听联机",
+  "version": "2.3.0",
+  "targetApp": "Mineradio",
+  "supportedMajors": ["2"],
+  "minVersion": "2.0.1",
+  "testedVersions": ["2.2.0"],
+  "patchId": "jiafee-coplay2",
+  "payloadFiles": [
+    "desktop/together-listen/authoritative-room.js",
+    "desktop/together-listen/config-store.js",
+    "desktop/together-listen/discovery.js",
+    "desktop/together-listen/manager.js",
+    "desktop/together-listen/protocol.js",
+    "desktop/together-listen/room-service.js",
+    "desktop/together-listen/tcp-transport.js",
+    "public/js/modules/12-together-listen/playback-controller-core.js",
+    "public/js/modules/12-together-listen/player-adapter.js",
+    "public/js/modules/12-together-listen/playback-controller.js",
+    "public/js/modules/12-together-listen/ui.js"
+  ],
+  "requiredFiles": ["desktop/main.js", "desktop/preload.js", "public/index.html", "public/css/index.css", "public/js/index-loader.js", "public/js/modules/05-playback/13-playback-start-audio.js", "public/js/modules/05-playback/18-cuefield-automix-integration.js", "public/js/modules/06-lyrics/04-progress-seek.js", "package.json"],
+  "dependencies": { "ws": ">=8.0.0" },
+  "payloadDirectories": [
+    { "source": "node_modules/ws", "target": "node_modules/ws" }
+  ],
+  "payloadInserts": [
+    { "file":"desktop/main.js", "markerId":"main-imports", "anchor":"registerWallpaperEngineScheme(protocol);", "before":true, "snippetFile":"together-listen/main-imports.js" },
+    { "file":"desktop/main.js", "markerId":"main-runtime", "anchor":"const fullDesktopModeRuntime = new FullDesktopModeRuntime({", "before":true, "snippetFile":"together-listen/main-runtime.js" },
+    { "file":"desktop/main.js", "markerId":"main-ipc", "anchor":"ipcMain.handle('desktop-window-minimize'", "before":true, "snippetFile":"together-listen/main-ipc.js" },
+    { "file":"desktop/main.js", "markerId":"main-cleanup", "anchor":"const runtimeCleanup = fullDesktopAndWallpaperEngineCleanup;", "replace":true, "snippetFile":"together-listen/main-cleanup-assignment.js" },
+    { "file":"desktop/preload.js", "markerId":"preload", "anchor":"window.addEventListener('DOMContentLoaded'", "before":true, "snippetFile":"together-listen/preload-bridge.js" },
+    { "file":"public/js/index-loader.js", "markerId":"loader", "anchor":"    'js/modules/11-main-loop.js',", "before":true, "snippet":"    'js/modules/12-together-listen/playback-controller-core.js',\n    'js/modules/12-together-listen/player-adapter.js',\n    'js/modules/12-together-listen/playback-controller.js',\n    'js/modules/12-together-listen/ui.js',\n" },
+    { "file":"public/index.html", "markerId":"entry", "anchor":"        <button class=\"desktop-window-btn\"", "before":true, "markerStyle":"html", "snippetFile":"together-listen/index-entry.html" },
+    { "file":"public/index.html", "markerId":"presence", "anchor":"    <!-- 顶部搜索 -->", "before":true, "markerStyle":"html", "snippetFile":"together-listen/index-presence.html" },
+    { "file":"public/index.html", "markerId":"modal", "anchor":"  <script src=\"js/index-loader.js\"></script>", "before":true, "markerStyle":"html", "snippetFile":"together-listen/index-modal.html" },
+    { "file":"public/js/modules/05-playback/13-playback-start-audio.js", "markerId":"gapless", "anchor":"function albumGaplessQueueCanAdvance(idx) {", "replace":true, "snippetFile":"together-listen/playback-gapless.js" },
+    { "file":"public/js/modules/05-playback/13-playback-start-audio.js", "markerId":"local-autoplay", "anchor":"audio.autoplay = true;", "replace":true, "snippetFile":"together-listen/playback-autoplay.js" },
+    { "file":"public/js/modules/05-playback/13-playback-start-audio.js", "markerId":"local-ended", "anchor":"if (this && this.__mineradioCuefieldEndedRecoveryToken === token) return;", "replace":true, "snippetFile":"together-listen/playback-ended.js" },
+    { "file":"public/js/modules/05-playback/13-playback-start-audio.js", "markerId":"local-start", "anchor":"var playbackStarted = await playAudio({ manual: !!opts.manual, silent: !!opts.startupAutoplay || !opts.manual, startupAutoplay: !!opts.startupAutoplay, trackSwitch: true, resumeRecovery: !!opts.resumeRecovery });", "replace":true, "snippetFile":"together-listen/playback-local-start.js" },
+    { "file":"public/js/modules/05-playback/13-playback-start-audio.js", "markerId":"remote-autoplay", "anchor":"audio.autoplay = true;", "replace":true, "snippetFile":"together-listen/playback-autoplay.js" },
+    { "file":"public/js/modules/05-playback/13-playback-start-audio.js", "markerId":"remote-ended", "anchor":"if (this && this.__mineradioCuefieldEndedRecoveryToken === token) return;", "occurrence":2, "replace":true, "snippetFile":"together-listen/playback-ended.js" },
+    { "file":"public/js/modules/05-playback/13-playback-start-audio.js", "markerId":"remote-start", "anchor":"var playbackStarted = await playAudio({ manual: !!opts.manual, silent: isQQPlayback || !!opts.startupAutoplay || !opts.manual, startupAutoplay: !!opts.startupAutoplay, trackSwitch: true, resumeRecovery: !!opts.resumeRecovery, fade: albumGaplessHandoff ? false : opts.fade, preserveGain: albumGaplessMixed, expectedMedia: playbackMedia, expectedToken: token });", "replace":true, "snippetFile":"together-listen/playback-remote-start.js" },
+    { "file":"public/js/modules/05-playback/13-playback-start-audio.js", "markerId":"session", "anchor":"safePlaybackStep('listen-session-begin', function () { beginListenSession(song, playbackContext); });", "replace":true, "snippetFile":"together-listen/playback-session.js" },
+    { "file":"public/js/modules/05-playback/18-cuefield-automix-integration.js", "markerId":"cuefield", "anchor":"function tickCuefieldAutoMix() {", "replace":true, "snippetFile":"together-listen/cuefield-guard.js" },
+    { "file":"public/js/modules/06-lyrics/04-progress-seek.js", "markerId":"seek-state", "anchor":"progressDragState.resumeAfterSeek = !!(audio && !audio.paused && !audio.ended && playing);", "replace":true, "snippetFile":"together-listen/seek-state.js" },
+    { "file":"public/js/modules/06-lyrics/04-progress-seek.js", "markerId":"seek-pause", "anchor":"if (progressDragState.resumeAfterSeek) {", "replace":true, "snippetFile":"together-listen/seek-pause-guard.js" },
+    { "file":"public/css/index.css", "append":true, "markerStyle":"css", "snippetFile":"together-listen/together-index.css" },
+    { "file":"package.json", "jsonDependency":"ws", "jsonValue":"^8.22.0" }
+  ]
+}

@@ -1,0 +1,8 @@
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+}
+/* All motion is frame-driven in Remotion. No CSS animation or transition. */

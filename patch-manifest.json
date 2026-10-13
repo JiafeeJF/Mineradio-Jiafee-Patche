@@ -1,0 +1,23 @@
+{
+  "name": "Jiafee FX Patch",
+  "displayName": "音效增强",
+  "version": "2.2.0",
+  "targetApp": "Mineradio",
+  "supportedMajors": ["2"],
+  "testedVersions": ["2.2.0"],
+  "minVersion": "2.0.1",
+  "patchId": "jiafee-fx-v2",
+  "markerFile": ".jiafee-fx-patch.json",
+  "payloadFiles": [
+    "public/js/modules/07-fx/10-sound-effect-runtime.js",
+    "public/fx-presets.json",
+    "public/vendor/mineradio-fx.js",
+    "public/vendor/mineradio-fx-worklet.js"
+  ],
+  "requiredFiles": ["public/index.html", "public/css/index.css", "public/js/index-loader.js"],
+  "payloadInserts": [
+    { "file":"public/index.html", "anchor":"</head>", "before":true, "markerStyle":"html", "snippetFile":"audio-effects/index-head.html" },
+    { "file":"public/js/index-loader.js", "anchor":"    'js/modules/11-main-loop.js',", "before":true, "markerStyle":"js", "snippetFile":"audio-effects/index-loader-line.js" },
+    { "file":"public/css/index.css", "append":true, "markerStyle":"css", "snippetFile":"audio-effects/index.css" }
+  ]
+}
