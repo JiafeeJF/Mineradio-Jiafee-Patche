@@ -45,16 +45,15 @@ docker compose up -d --build
 ## 开发和构建
 
 ```powershell
-npm test
 npm run build:win:dir
 npm run build:win
 ```
 
 目录构建在 `dist/win-unpacked`，NSIS 安装包在 `dist`。
 
-## 验证范围
+## 验证记录
 
-`test-together-enhancements.js` 覆盖局域网免码、公网鉴权边界和互动动画资源；`test-multifunction.js` 覆盖仅音效、仅一起听、组合安装、重复安装、逐个卸载及原始哈希恢复。一起听协议/服务/播放器适配继续使用新版源码自带的 `tests/together-listen-*.test.js` 测试集。
+测试源码、网页预览和演示视频工程不随公开仓库发布。历史自动化与实际运行验证结果记录在 `docs/TEST-RESULTS.md`。
 
 真实双设备、FRP 公网链路及受限歌曲仍需要两台 Windows 设备、有效网络隧道和对应音乐平台账户，无法由本地单机自动化替代。
 

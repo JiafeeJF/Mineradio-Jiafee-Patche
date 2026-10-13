@@ -8,8 +8,6 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node test-together-enhancements.js && node test-multifunction.js",
-    "test:legacy": "node test-roundtrip.js && node test-sync-engine.js",
     "build:win": "electron-builder --win nsis",
     "build:win:dir": "electron-builder --win dir"
   },
@@ -26,7 +24,6 @@
       "payload/**/*",
       "build/**/*",
       "patch-manifest*.json",
-      "test-multifunction.js",
       "icon.ico",
       "icon.png",
       "package.json"

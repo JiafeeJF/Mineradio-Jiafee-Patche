@@ -7,8 +7,11 @@ node_modules/
 # Build output and downloaded runtimes
 dist/
 .electron-cache/
-demo-video/out/
-demo-video/.cache/
+demo-video/
+
+# Local test harnesses and previews
+/test-*.js
+test-web/
 
 # Local configuration and secrets
 .env
