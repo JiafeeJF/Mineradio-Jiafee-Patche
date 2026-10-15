@@ -1,5 +1,7 @@
 # Mineradio 多功能补丁器
 
+> 最后更新：2026-10-05
+
 面向 Mineradio 2.2.0 的 Electron 本地补丁工具，包含两个互不依赖的模块：
 
 - 音效增强：Jiafee 音效预设、10 段均衡器和 Web Audio 处理链。
