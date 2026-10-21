@@ -57,6 +57,6 @@ npm run build:win
 
 历史自动化与实际运行验证结果记录在 `docs/TEST-RESULTS.md`。
 
-真实双设备、FRP 公网链路及受限歌曲仍需要两台 Windows 设备、有效网络隧道和对应音乐平台账户，无法由本地单机自动化替代。
+双设备测试通过异地/同局域网双设备正常使用验证。
 
 详细资料见 `docs/SOURCE-DIFF-REPORT.md`、`docs/MODULES.md` 和 `docs/TEST-RESULTS.md`。
