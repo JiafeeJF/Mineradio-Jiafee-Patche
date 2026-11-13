@@ -45,7 +45,7 @@ docker compose up -d --build
 
 完整部署、端口、防火墙和反向代理说明见 `together-relay-server/README.md`。
 
-Windows 服务器也可安装 Release 中的 `Mineradio-Together-Relay-Control-1.0.1-Setup.exe`，通过图形界面配置授权码、监听地址并启动、停止和查看中转服务状态。控制端源码位于 `together-relay-server/windows-control`。
+Windows 服务器也可安装 Release 中的 `Mineradio-Together-Relay-Control-1.0.2-Setup.exe`，通过图形界面配置授权码、监听地址并启动、停止和查看中转服务状态。1.0.2 已内置账号校验运行时；控制端源码位于 `together-relay-server/windows-control`。
 
 “卸载所选模块”只删除所选模块自己的标记块和资源；另一个已安装模块会被保留。再次安装同一模块用于更新，标记块不会重复插入。
 

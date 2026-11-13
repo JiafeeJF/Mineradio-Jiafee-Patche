@@ -18,6 +18,8 @@ const required = [
   'tcp-transport.js',
 ];
 
+// Never mix modules from an older installed runtime with the current protocol.
+fs.rmSync(runtimeLib, { recursive: true, force: true });
 fs.mkdirSync(runtimeLib, { recursive: true });
 fs.copyFileSync(process.execPath, path.join(runtime, 'node.exe'));
 for (const file of ['server.js', 'healthcheck.js']) {
@@ -28,6 +30,11 @@ for (const file of required) {
   if (!fs.existsSync(source)) throw new Error(`Missing relay runtime file: ${source}`);
   fs.copyFileSync(source, path.join(runtimeLib, file));
 }
+fs.writeFileSync(path.join(runtime, 'runtime-capabilities.json'), JSON.stringify({
+  protocol: 'MINERADIO/1',
+  accountIdentity: 1,
+  requiredFiles: required,
+}, null, 2));
 fs.rmSync(runtimeWs, { recursive: true, force: true });
 fs.cpSync(path.join(root, 'node_modules', 'ws'), runtimeWs, { recursive: true });
 const iconSource = path.resolve(relayRoot, '..', 'build', 'icon.ico');

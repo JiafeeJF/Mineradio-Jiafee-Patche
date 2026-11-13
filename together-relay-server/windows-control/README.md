@@ -1,5 +1,7 @@
 # Mineradio 一起听中转控制台（Windows）
 
+当前版本：1.0.2。该版本内置支持账号身份字段与同账号拒绝的中转运行时。
+
 这是现有 `together-relay-server` 的 Windows 图形控制端。它打包同一套中转运行时，不修改 Mineradio 客户端协议，也不影响 Docker 部署。
 
 ## 功能

@@ -15,14 +15,14 @@
 
 - `Jiafee-FX-Patch-2.4.0-Setup.exe`：Windows 安装包。
 - `Jiafee-FX-Patch-2.4.0-Portable.zip`：免安装便携包。
-- `Mineradio-Together-Relay-Control-1.0.1-Setup.exe`：Windows 中转服务图形控制端。
+- `Mineradio-Together-Relay-Control-1.0.2-Setup.exe`：Windows 中转服务图形控制端，修复旧运行时残留导致的账号校验不受支持。
 
 ## 校验
 
 ```text
 0EF953445E84226EBABE356C61D21EBFF1394863998CC8B909FA871434F91E80  Jiafee-FX-Patch-2.4.0-Setup.exe
 9F9BBDDF070BD68C212C5046B49A41E56B95068BA84D3DAD72C9A64EB100516B  Jiafee-FX-Patch-2.4.0-Portable.zip
-390166FFBE9DF6B6F41E5E0199F5FB646E29805AF5953A9721721722B627ACE8  Mineradio-Together-Relay-Control-1.0.1-Setup.exe
+67C453EBF5A23312FFF0744F288DE427706FD60658D6D516F5E80E5D3E7ACF12  Mineradio-Together-Relay-Control-1.0.2-Setup.exe
 ```
 
 自动化身份、队列与退出路径测试 30/30 通过；增强回归和三种注入组合测试通过。用户已完成真实双机端到端验收，详见 `docs/TEST-RESULTS.md`。

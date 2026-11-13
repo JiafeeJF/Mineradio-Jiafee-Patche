@@ -11,6 +11,7 @@
 - `npm run build:win:dir` 与 `npm run build:win` 成功；最终 NSIS 和 unpacked 目录均包含补丁引擎、两个模块及内置 `ws` 运行时。
 - 2.4.0 身份、队列和退出路径测试：30/30 通过。覆盖启动时空登录态误判、网易云优先、QQ 回退、账号接口不可用、缺失 UID、同账号快速拒绝、服务端接纳后再报告连接成功、单人不清队列、双人配对重置、主动退出恢复及旧中转服保护。
 - `test-together-enhancements.js` 与 `test-multifunction.js` 通过；仅音效、仅一起听及组合注入回归均通过。
+- Windows 中转控制端 1.0.2 的打包后运行时验收通过：不同平台账号加入后的权威房间状态包含平台和 UID；第三个同平台、同 UID 客户端收到 `SAME_MUSIC_ACCOUNT` 并被拒绝。控制端基础测试 5/5 通过。
 - 本次 2.4.0 构建产物为 `dist/Jiafee-FX-Patch-2.4.0-Setup.exe`，SHA-256 为 `0EF953445E84226EBABE356C61D21EBFF1394863998CC8B909FA871434F91E80`；便携包 SHA-256 为 `9F9BBDDF070BD68C212C5046B49A41E56B95068BA84D3DAD72C9A64EB100516B`。一起听入口继续固定在桌面标题栏 DIY 按钮旁，面板外壳沿用音效 `quality-popover` 的 `blur(24px) saturate(1.25)` 背景滤镜、冰灰细边框和双层阴影。
 
 ## 真实双机验收

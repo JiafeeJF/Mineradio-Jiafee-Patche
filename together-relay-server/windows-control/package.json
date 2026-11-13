@@ -1,7 +1,7 @@
 {
   "name": "mineradio-together-relay-control",
   "productName": "Mineradio 一起听中转控制台",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "JIAFEE Mineradio 一起听中转服务 Windows 图形控制端。",
   "author": "Jiafee",
   "license": "GPL-3.0-only",
