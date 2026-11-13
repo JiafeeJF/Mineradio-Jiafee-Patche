@@ -1,7 +1,7 @@
 {
   "name": "Mineradio Together Listen",
   "displayName": "一起听联机",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "targetApp": "Mineradio",
   "supportedMajors": ["2"],
   "minVersion": "2.0.1",
@@ -12,6 +12,7 @@
     "desktop/together-listen/config-store.js",
     "desktop/together-listen/discovery.js",
     "desktop/together-listen/manager.js",
+    "desktop/together-listen/payload-budget.js",
     "desktop/together-listen/protocol.js",
     "desktop/together-listen/room-service.js",
     "desktop/together-listen/tcp-transport.js",

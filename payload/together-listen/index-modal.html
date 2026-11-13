@@ -7,19 +7,11 @@
     <div id="together-message" class="together-message" aria-live="polite"></div>
     <div id="together-lobby-view" class="together-lobby-view">
       <section class="together-section together-profile-section">
-        <div class="together-section-head"><div><h3>我的联机资料</h3><p>仅在当前直连会话中展示</p></div><button id="together-profile-save" class="together-secondary-btn" type="button">保存</button></div>
+        <div class="together-section-head"><div><h3>我的联机资料</h3><p>自动关联已登录账号 · 网易云优先</p></div><span id="together-profile-membership" class="together-membership-badge" hidden></span></div>
         <div class="together-profile-editor">
-          <button id="together-profile-avatar" class="together-profile-avatar default-signal" type="button" title="上传头像"><span>我</span></button>
-          <label><span>显示名称</span><input id="together-profile-name" maxlength="48" placeholder="Mineradio 听众"></label>
-          <div class="together-avatar-presets" role="group" aria-label="默认头像">
-            <button type="button" data-avatar-preset="default:signal" title="信号"></button>
-            <button type="button" data-avatar-preset="default:rose" title="玫瑰"></button>
-            <button type="button" data-avatar-preset="default:mono" title="黑白"></button>
-            <button type="button" data-avatar-preset="default:mint" title="薄荷"></button>
-            <button id="together-avatar-upload" type="button">上传图片</button>
-          </div>
+          <div id="together-profile-avatar" class="together-profile-avatar default-signal" aria-label="账号头像"><span>我</span></div>
+          <label><span>账号昵称 · 自动同步</span><input id="together-profile-name" readonly aria-readonly="true" placeholder="未登录用户"></label>
         </div>
-        <input id="together-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
       </section>
       <section class="together-section together-create-section">
         <div class="together-section-head"><div><h3>创建一起听世界</h3><p>在本机开启一个双人同步服务器</p></div></div>

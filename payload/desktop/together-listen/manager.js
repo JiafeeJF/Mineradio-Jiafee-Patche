@@ -13,6 +13,7 @@ const { RoomService } = require('./room-service');
 const { LanDiscovery, DISCOVERY_PORT } = require('./discovery');
 const { TogetherConfigStore } = require('./config-store');
 const { TYPES, id } = require('./protocol');
+const { inspectJsonPayload } = require('./payload-budget');
 
 const MAX_RECONNECT_ATTEMPTS = 3;
 
@@ -223,21 +224,31 @@ class TogetherListenManager extends EventEmitter {
         });
       this.socket = transportSocket;
       const timeout = setTimeout(() => { if (!settled) { settled = true; transportSocket.terminate(); if (options.savedServerId) this.markSaved(options.savedServerId, 'offline'); reject(new Error('TCP 连接超时：确认 FRP 使用 type=tcp，并转发开服面板显示的 TCP 监听端口（UDP 17862 仅用于局域网发现）')); } }, 9000);
+      this.pendingAdmission = { socket: transportSocket, finish: (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        this.pendingAdmission = null;
+        if (error) { reject(error); return; }
+        this.connectionState = 'connected';
+        this.reconnectAttempt = 0;
+        this.startHeartbeat();
+        this.emitEvent('status', { status: this.status() });
+        resolve(this.status());
+      } };
       transportSocket.once('open', () => {
         if (this.socket !== transportSocket) return;
-        clearTimeout(timeout);
-        settled = true;
         if (transportSocket._socket) {
           transportSocket._socket.setNoDelay(true);
           transportSocket._socket.setKeepAlive(true, 15000);
         }
-        this.connectionState = 'connected';
-        this.reconnectAttempt = 0;
         const profile = this.config.profile();
-        this.send({ type: TYPES.HELLO, operationId: id(12), payload: { name: profile.name, avatar: profile.avatar } });
-        this.startHeartbeat();
-        this.emitEvent('status', { status: this.status() });
-        resolve(this.status());
+        // Socket open is not room admission. The first HELLO carries verified identity;
+        // only an authoritative membership response can complete connect().
+        if (!this.send({ type: TYPES.HELLO, operationId: id(12), payload: { name: profile.name, avatar: profile.avatar, platform: profile.platform, uid: profile.uid } })) {
+          this.pendingAdmission.finish(new Error('HELLO_SEND_FAILED'));
+          this.leave().catch(() => {});
+        }
       });
       transportSocket.on('message', (data, isBinary) => this.handleMessage(transportSocket, data, isBinary));
       transportSocket.once('handshake-error', (failure) => {
@@ -289,8 +300,21 @@ class TogetherListenManager extends EventEmitter {
       payload: message.payload && typeof message.payload === 'object' ? message.payload : {},
     };
     this.trace('send', { operationId: envelope.operationId, stateVersion: version, trackId: envelope.payload.trackId, action, result: 'queued' });
-    this.socket.send(JSON.stringify(envelope));
-    return true;
+    const inspected = inspectJsonPayload(envelope);
+    if (!inspected.ok) {
+      this.trace('send', { operationId: envelope.operationId, stateVersion: version, trackId: envelope.payload.trackId, action, result: inspected.code });
+      this.emitEvent('error', { code: 'MESSAGE_TOO_LARGE', operationId: envelope.operationId });
+      return false;
+    }
+    try {
+      const accepted = this.socket.send(inspected.text, (error) => {
+        if (error) this.trace('send', { operationId: envelope.operationId, stateVersion: version, action, result: error.code || error.message || 'SEND_FAILED' });
+      });
+      return accepted !== false;
+    } catch (error) {
+      this.trace('send', { operationId: envelope.operationId, stateVersion: version, action, result: error.code || error.message || 'SEND_FAILED' });
+      return false;
+    }
   }
 
   request(type, payload = {}, source = 'local', requestedOperationId = '') {
@@ -335,6 +359,8 @@ class TogetherListenManager extends EventEmitter {
       const state = { ...rawState, receivedAt: Date.now(), clockOffsetMs: this.serverClockOffsetMs };
       if (!this.roomState || Number(state.version) >= Number(this.roomState.version)) {
         this.roomState = state;
+        if (this.pendingAdmission && this.pendingAdmission.socket === ws && Array.isArray(state.members)
+          && state.members.some((member) => member.senderId === this.clientId)) this.pendingAdmission.finish();
         const causeAction = String(message.payload.causeAction || message.payload.action || state.lastAction || '');
         const metadataOnly = !this.needsFullResync && [TYPES.HELLO, TYPES.JOIN_ROOM, TYPES.PRESENCE, TYPES.MESSAGE_SEND].includes(causeAction);
         this.needsFullResync = false;
@@ -376,6 +402,12 @@ class TogetherListenManager extends EventEmitter {
       });
     } else if (message.type === TYPES.ERROR) {
       const code = String(message.payload && message.payload.code || 'UNKNOWN_ERROR');
+      if (this.pendingAdmission && this.pendingAdmission.socket === ws) this.pendingAdmission.finish(new Error(code));
+      if (code === 'SAME_MUSIC_ACCOUNT') {
+        this.emitEvent('error', { code, operationId: String(message.operationId || '') });
+        this.leave().catch(() => {});
+        return;
+      }
       if (code === 'ROOM_CLOSED' || code === 'SERVER_CLOSED') this.explicitClose = true;
       this.emitEvent('error', { code, operationId: String(message.operationId || '') });
     }
@@ -383,6 +415,7 @@ class TogetherListenManager extends EventEmitter {
 
   handleClose(ws, code, reason) {
     if (ws !== this.socket) return;
+    if (this.pendingAdmission && this.pendingAdmission.socket === ws) this.pendingAdmission.finish(new Error('连接在房间接纳前关闭'));
     this.socket = null;
     this.stopHeartbeat();
     this.connectionState = this.explicitClose ? 'idle' : 'disconnected';
@@ -441,6 +474,7 @@ class TogetherListenManager extends EventEmitter {
   stopHeartbeat() { if (this.heartbeatTimer) clearInterval(this.heartbeatTimer); this.heartbeatTimer = null; this.pendingHeartbeats.clear(); }
 
   clearSocket(explicit = true) {
+    if (this.pendingAdmission) { this.pendingAdmission.finish(new Error('连接已取消')); this.pendingAdmission = null; }
     clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
     this.stopHeartbeat();

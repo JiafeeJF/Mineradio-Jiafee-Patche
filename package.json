@@ -1,7 +1,7 @@
 {
   "name": "jiafee-fx-patcher",
   "productName": "Mineradio 多功能补丁器",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Mineradio 2.2.0 音效增强与一起听模块化注入补丁器。",
   "author": "Jiafee",
   "main": "desktop/main.js",

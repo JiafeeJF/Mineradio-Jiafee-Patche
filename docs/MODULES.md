@@ -7,7 +7,7 @@
 - 验证：资源存在、三个增量标记存在、模块加载项唯一。
 - 卸载：删除四个资源及自己的三个标记块；保留一起听标记。
 
-## 一起听联机 `jiafee-coplay2` 2.3.0
+## 一起听联机 `jiafee-coplay2` 2.4.0
 
 - 依赖：随补丁注入的 `ws ^8.22.0`；Node 内置 `net`、`http`、`https`、`dns`、`dgram`、`crypto`。
 - 后端：`desktop/together-listen/*.js`。

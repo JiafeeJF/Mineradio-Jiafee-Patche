@@ -13,10 +13,17 @@ function sanitizeAvatar(value) {
   return 'default:signal';
 }
 
+function sanitizeIdentity(value = {}) {
+  const platform = ['netease', 'qq'].includes(value.platform) ? value.platform : 'none';
+  const uid = typeof value.uid === 'string' || typeof value.uid === 'number' ? String(value.uid).trim() : '';
+  return { platform, uid: platform !== 'none' && uid.length <= 128 ? uid : '' };
+}
+
 function sanitizeProfile(value = {}) {
   return {
     name: String(value.name || value.displayName || 'Mineradio 听众').trim().slice(0, 48) || 'Mineradio 听众',
     avatar: sanitizeAvatar(value.avatar),
+    ...sanitizeIdentity(value),
   };
 }
 
@@ -88,4 +95,4 @@ class TogetherConfigStore {
   }
 }
 
-module.exports = { TogetherConfigStore, sanitizeAvatar, sanitizeProfile };
+module.exports = { TogetherConfigStore, sanitizeAvatar, sanitizeProfile, sanitizeIdentity };

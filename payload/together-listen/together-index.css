@@ -18996,3 +18996,9 @@ body.desktop-shell.desktop-wallpaper-mode.diy-mode #bottom-bar.stage-mode {
     width: calc(100vw - var(--desktop-safe-left) - var(--desktop-safe-right) - 24px);
   }
 }
+
+/* Read-only account identity, host membership palette. */
+.together-profile-section .together-profile-avatar { cursor:default; }
+.together-profile-section .together-membership-badge { color:rgba(244,210,138,.96); background:rgba(244,210,138,.12); border:1px solid rgba(244,210,138,.3); border-radius:5px; padding:3px 7px; font-size:11px; font-weight:700; flex-shrink:0; }
+.together-profile-section .together-membership-badge[hidden] { display:none; }
+.together-profile-section input[readonly] { cursor:default; }

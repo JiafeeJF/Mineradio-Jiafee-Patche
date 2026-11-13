@@ -9,8 +9,17 @@
   var originals = adapter.originals;
   var latestRoom = null;
   var lastPresenceStatus = '';
-  var clearPlaybackOnNextConnection = true;
-  var togetherSessionActive = false;
+  var transportConnected = false;
+  var reconnectingSession = false;
+  var localPlaybackBackup = null;
+  var participatedInPair = false;
+  var restoringPlayback = Promise.resolve();
+  function captureSession() {
+    if (!localPlaybackBackup) localPlaybackBackup = adapter.captureLocalPlayback();
+  }
+  async function prepareSession() {
+    await restoringPlayback;
+  }
 
   function showError(error) {
     var message = error && error.message === 'PLAYBACK_TRACK_UNAVAILABLE'
@@ -46,32 +55,65 @@
     }
   });
 
+  // JIAFEE SAFE EXIT: one idempotent path cancels authority before restoring local state.
+  function exitTogetherMode(options) {
+    options = options || {};
+    controller.setConnection(false);
+    controller.resetSessionIdentity();
+    transportConnected = false;
+    latestRoom = null;
+    var backup = localPlaybackBackup;
+    var restore = participatedInPair || options.reason === 'same_account';
+    localPlaybackBackup = null;
+    participatedInPair = false;
+    if (restore && backup) restoringPlayback = restoringPlayback.then(function () { return adapter.restoreLocalPlayback(backup); }).catch(showError);
+    var close = options.transportClosed ? Promise.resolve() : bridge.leave(!!options.stopHost);
+    return Promise.all([close, restoringPlayback]).then(function (results) { return results[0]; });
+  }
+
   function setConnectionFromStatus(status) {
-    var connected = !!(status && status.connectionState === 'connected');
-    var wasTogetherSessionActive = togetherSessionActive;
-    controller.setConnection(connected, status && status.clientId);
-    if (connected && clearPlaybackOnNextConnection) {
-      clearPlaybackOnNextConnection = false;
-      Promise.resolve(adapter.resetSessionPlayback()).catch(showError);
-    }
-    if (connected) togetherSessionActive = true;
-    if (!connected) {
-      if (status && status.connectionState === 'idle') {
-        clearPlaybackOnNextConnection = true;
-        togetherSessionActive = false;
-        if (typeof controller.resetSessionIdentity === 'function') controller.resetSessionIdentity();
-        if (wasTogetherSessionActive) Promise.resolve(adapter.resetSessionPlayback()).catch(showError);
-      }
+    var phase = status && status.connectionState;
+    transportConnected = phase === 'connected';
+    if (phase === 'reconnecting' || phase === 'disconnected') reconnectingSession = true;
+    if (transportConnected) reconnectingSession = false;
+    if (phase === 'connecting' || transportConnected) captureSession();
+    // Transport connectivity alone must never take over solo playback.
+    if (!transportConnected) {
+      controller.setConnection(false, status && status.clientId);
       latestRoom = null;
       lastPresenceStatus = '';
+      if (phase === 'idle' && (!status.target || !reconnectingSession || !participatedInPair)) {
+        reconnectingSession = false;
+        exitTogetherMode({ transportClosed: true }).catch(showError);
+      }
+    } else {
+      controller.clientId = String(status.clientId || controller.clientId || '');
     }
-    document.body.classList.toggle('together-connected', connected);
+    document.body.classList.toggle('together-connected', transportConnected);
     document.dispatchEvent(new CustomEvent('mineradio-together-status', { detail: status || {} }));
   }
 
   function acceptRoomEvent(event) {
     latestRoom = event.state;
-    controller.acceptAuthority(event);
+    var members = latestRoom && Array.isArray(latestRoom.members) ? latestRoom.members : [];
+    var full = members.length === 2 && new Set(members.map(function (member) { return member.senderId; }).filter(Boolean)).size === 2;
+    if (transportConnected && full) {
+      var supported = members.every(function (member) { return ['netease', 'qq', 'none'].includes(member.platform) && typeof member.uid === 'string'; });
+      var duplicate = supported && members[0].platform !== 'none' && members[0].uid && members[0].platform === members[1].platform && members[0].uid === members[1].uid;
+      if (!supported || duplicate) {
+        controller.setConnection(false);
+        var code = duplicate ? 'SAME_MUSIC_ACCOUNT' : 'ACCOUNT_CHECK_UNSUPPORTED';
+        document.dispatchEvent(new CustomEvent('mineradio-together-error', { detail: { code: code } }));
+        exitTogetherMode({ reason: duplicate ? 'same_account' : 'unsupported' }).catch(showError);
+        return;
+      }
+    }
+    controller.setConnection(transportConnected && full);
+    if (controller.connected) {
+      captureSession();
+      participatedInPair = true;
+      controller.acceptAuthority(event);
+    }
     document.dispatchEvent(new CustomEvent('mineradio-together-state', { detail: event.state }));
   }
 
@@ -95,6 +137,8 @@
     if (event.kind === 'room-state') acceptRoomEvent(event);
     if (event.kind === 'message') document.dispatchEvent(new CustomEvent('mineradio-together-message', { detail: event }));
     if (event.kind === 'error') {
+      if (['SAME_MUSIC_ACCOUNT', 'RECONNECT_EXHAUSTED', 'ROOM_CLOSED', 'SERVER_CLOSED'].includes(event.code)) exitTogetherMode({ reason: event.code === 'SAME_MUSIC_ACCOUNT' ? 'same_account' : event.code }).catch(showError);
+      if (['ROOM_CLOSED', 'SERVER_CLOSED', 'RECONNECT_EXHAUSTED'].includes(event.code)) reconnectingSession = false;
       if (event.operationId && controller.rejectPrediction(event.operationId)) controller.feedback('RESYNC', { reason: 'prediction-rejected' }).catch(function () {});
       document.dispatchEvent(new CustomEvent('mineradio-together-error', { detail: event }));
     }
@@ -184,6 +228,8 @@
     if (status && status.room) acceptRoomEvent({ state: status.room, operationId: status.room.lastOperationId || '', acceptedSenderId: '' });
   }).catch(function () {});
 
+  controller.prepareSession = prepareSession;
+  controller.exitTogetherMode = exitTogetherMode;
   controller.isConnected = function () { return controller.connected; };
   controller.getRoom = function () { return latestRoom; };
   controller.destroy = function () { controller.setConnection(false); };

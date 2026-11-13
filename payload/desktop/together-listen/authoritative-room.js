@@ -35,6 +35,20 @@ class AuthoritativeRoom {
     return JSON.parse(JSON.stringify(this.state));
   }
 
+  checkpoint() {
+    return {
+      sequence: this.sequence,
+      seen: new Map(this.seen),
+      state: this.snapshot(),
+    };
+  }
+
+  restore(checkpoint) {
+    this.sequence = checkpoint.sequence;
+    this.seen = new Map(checkpoint.seen);
+    this.state = JSON.parse(JSON.stringify(checkpoint.state));
+  }
+
   resetForNewPair(operationId = '', senderId = 'server') {
     const state = this.state;
     this.advanceClock();
@@ -69,6 +83,8 @@ class AuthoritativeRoom {
     this.state.members = members.slice(0, 2).map((member) => ({
       senderId: String(member.senderId || '').slice(0, 96),
       name: String(member.name || '听众').slice(0, 48),
+      platform: member.platform || 'none',
+      uid: String(member.uid || ''),
       joinedAt: Number(member.joinedAt) || Date.now(),
       avatar: String(member.avatar || 'default:signal').slice(0, 24000),
       status: String(member.status || 'idle').slice(0, 24),

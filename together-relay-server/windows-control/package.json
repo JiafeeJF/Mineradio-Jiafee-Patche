@@ -1,0 +1,50 @@
+{
+  "name": "mineradio-together-relay-control",
+  "productName": "Mineradio 一起听中转控制台",
+  "version": "1.0.1",
+  "description": "JIAFEE Mineradio 一起听中转服务 Windows 图形控制端。",
+  "author": "Jiafee",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": {
+    "sync:runtime": "node scripts/sync-runtime.cjs",
+    "start": "npm run sync:runtime && electron .",
+    "build:win:dir": "npm run sync:runtime && electron-builder --win dir",
+    "build:win": "npm run sync:runtime && electron-builder --win nsis"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.jiafee.mineradio.relaycontrol",
+    "productName": "Mineradio 一起听中转控制台",
+    "asar": true,
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["src/**/*", "renderer/**/*", "build/**/*", "package.json"],
+    "extraResources": [
+      { "from": "runtime", "to": "relay-runtime", "filter": ["**/*"] },
+      { "from": "runtime/node_modules/ws", "to": "relay-runtime/node_modules/ws" }
+    ],
+    "win": {
+      "executableName": "Mineradio-Together-Relay-Control",
+      "icon": "build/icon.ico",
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mineradio 一起听中转控制台",
+      "artifactName": "Mineradio-Together-Relay-Control-${version}-Setup.${ext}"
+    }
+  }
+}
+

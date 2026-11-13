@@ -62,6 +62,28 @@
     };
   }
 
+  function captureLocalPlayback() {
+    // This is a local backup, not the lossy, 200-item protocol snapshot.
+    return structuredClone({ queue: playQueue, currentIndex: currentIdx,
+      position: getPlaybackCurrentSeconds(), playing: !!(audio && !audio.paused && !audio.ended), mode: playMode });
+  }
+
+  async function restoreLocalPlayback(backup) {
+    await resetSessionPlayback();
+    playQueue = structuredClone(backup.queue);
+    currentIdx = Math.max(-1, Math.min(playQueue.length - 1, backup.currentIndex));
+    setMode(backup.mode);
+    safeRenderQueuePanel('together-session-restore', { scrollCurrent: false, deferWhenHidden: false });
+    safeShelfRebuild('together-session-restore', true);
+    // JIAFEE SAFE EXIT: never load/play during rollback. Host togglePlay loads on user intent.
+    if (typeof pendingPlaybackResumeAt !== 'undefined') pendingPlaybackResumeAt = Math.max(0, Number(backup.position) || 0);
+    playing = false;
+    setPlayIcon(false);
+    if (typeof updateControlTrackInfo === 'function') updateControlTrackInfo(playQueue[currentIdx] || null);
+    if (typeof restorePlaybackGain === 'function') restorePlaybackGain();
+    return true;
+  }
+
   function readState() {
     return {
       status: !audio || !audio.src ? 'idle' : (audio.seeking ? 'seeking' : (audio.readyState < 3 ? 'loading' : (audio.paused || audio.ended ? 'paused' : 'playing'))),
@@ -169,6 +191,9 @@
     cancelPendingWait();
     preparedTrackId = '';
     trackSwitchToken += 1;
+    if (typeof clearPlaybackResumeWatchdogs === 'function') clearPlaybackResumeWatchdogs();
+    if (typeof clearPlaybackResumePauseMarker === 'function') clearPlaybackResumePauseMarker();
+    if (typeof clearAlbumGaplessPreload === 'function') clearAlbumGaplessPreload('together-exit');
     if (typeof clearAudioFadeTimers === 'function') clearAudioFadeTimers();
     if (typeof restorePlaybackGain === 'function') restorePlaybackGain();
     if (typeof resetCuefieldAutoMix === 'function') resetCuefieldAutoMix('together-session-reset', { keepCurrentAudio: false });
@@ -262,6 +287,8 @@
     trackId: trackId,
     serializeTrack: serializeTrack,
     snapshot: snapshot,
+    captureLocalPlayback: captureLocalPlayback,
+    restoreLocalPlayback: restoreLocalPlayback,
     readState: readState,
     syncQueue: syncQueue,
     switchTrack: switchTrack,

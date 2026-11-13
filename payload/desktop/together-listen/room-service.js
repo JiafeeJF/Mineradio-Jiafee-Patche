@@ -1,12 +1,14 @@
 'use strict';
 
 const http = require('http');
+const { sanitizeIdentity } = require('./config-store');
 const net = require('net');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const { PROTOCOL, OPEN, TcpFrameSocket } = require('./tcp-transport');
 const { AuthoritativeRoom } = require('./authoritative-room');
 const { TYPES, validateEnvelope } = require('./protocol');
+const { MAX_ROOM_BROADCAST_BYTES, inspectJsonPayload } = require('./payload-budget');
 
 function isLanRemoteAddress(input) {
   let address = String(input || '').trim().toLowerCase();
@@ -226,27 +228,49 @@ class RoomService {
       if (!meta.senderId) {
         if (message.type !== TYPES.HELLO && message.type !== TYPES.JOIN_ROOM) return this.sendError(ws, 'HELLO_REQUIRED');
         if ([...this.clients.values()].some((item) => item.senderId === message.senderId)) return this.sendError(ws, 'DUPLICATE_CLIENT');
+        const identity = sanitizeIdentity(message.payload);
+        if (this.rejectSameAccount(ws, identity, message.operationId)) return;
+        const checkpoint = this.room.checkpoint();
+        const previousMeta = this.copyMeta(meta);
+        const previousPairKey = this.lastPairKey;
+        Object.assign(meta, identity);
         meta.senderId = message.senderId;
         meta.name = String(message.payload.name || '听众').slice(0, 48);
         meta.avatar = this.sanitizeAvatar(message.payload.avatar);
         this.clients.set(ws, meta);
         const membership = this.updateMembers();
         const pairReset = this.resetForNewPair(message.operationId || '', meta.senderId);
-        if (pairReset) this.broadcastState(message.operationId || '', meta.senderId, false, false, 'SESSION_RESET');
-        else if (membership.go) this.broadcastGo(message.operationId || '', meta.senderId);
-        else this.broadcastState(message.operationId || '', meta.senderId, false, false, message.type);
+        const prepared = pairReset
+          ? this.prepareStateBroadcast(message.operationId || '', meta.senderId, false, false, 'SESSION_RESET')
+          : membership.go
+            ? this.prepareGoBroadcast(message.operationId || '', meta.senderId)
+            : this.prepareStateBroadcast(message.operationId || '', meta.senderId, false, false, message.type);
+        if (!prepared.ok) {
+          this.clients.delete(ws);
+          this.restoreMeta(meta, previousMeta);
+          this.lastPairKey = previousPairKey;
+          this.room.restore(checkpoint);
+          this.sendError(ws, 'STATE_PAYLOAD_TOO_LARGE', message.operationId);
+          return;
+        }
+        this.broadcastPrepared(prepared);
         return;
       }
       if (message.senderId !== meta.senderId) return this.sendError(ws, 'SENDER_MISMATCH');
       if (message.type === TYPES.HEARTBEAT) {
-        ws.send(JSON.stringify(this.envelope(TYPES.HEARTBEAT, message.operationId || '', {
+        this.sendEnvelope(ws, this.envelope(TYPES.HEARTBEAT, message.operationId || '', {
           serverTimestamp: now,
           clientTimestamp: Number(message.payload.clientTimestamp) || 0,
-        })));
+        }));
         return;
       }
       if (message.type === TYPES.LEAVE_ROOM) return ws.close(1000, 'LEFT_ROOM');
       if (message.type === TYPES.PRESENCE) {
+        const identity = message.payload.platform != null ? sanitizeIdentity(message.payload) : null;
+        if (identity && this.rejectSameAccount(ws, identity, message.operationId)) return;
+        const checkpoint = this.room.checkpoint();
+        const previousMeta = this.copyMeta(meta);
+        if (identity) Object.assign(meta, identity);
         const allowed = new Set(['idle', 'loading', 'ready', 'playing', 'paused', 'seeking', 'switching', 'buffering', 'waiting', 'error']);
         const status = String(message.payload.status || '');
         if (status && allowed.has(status)) meta.status = status;
@@ -254,7 +278,14 @@ class RoomService {
         if (message.payload.avatar != null) meta.avatar = this.sanitizeAvatar(message.payload.avatar);
         if (Number.isFinite(Number(message.payload.latencyMs))) meta.latencyMs = Math.max(0, Math.min(9999, Math.round(Number(message.payload.latencyMs))));
         this.updateMembers();
-        this.broadcastState(message.operationId, meta.senderId, false, false, TYPES.PRESENCE);
+        const prepared = this.prepareStateBroadcast(message.operationId, meta.senderId, false, false, TYPES.PRESENCE);
+        if (!prepared.ok) {
+          this.restoreMeta(meta, previousMeta);
+          this.room.restore(checkpoint);
+          this.sendError(ws, 'STATE_PAYLOAD_TOO_LARGE', message.operationId);
+          return;
+        }
+        this.broadcastPrepared(prepared);
         return;
       }
       if (message.type === TYPES.MESSAGE_SEND) {
@@ -264,22 +295,40 @@ class RoomService {
         if (!text) return this.sendError(ws, 'EMPTY_MESSAGE', message.operationId);
         if (Buffer.byteLength(text, 'utf8') > 240) return this.sendError(ws, 'MESSAGE_TOO_LONG', message.operationId);
         if (now - meta.lastExpressionAt < 1800) return this.sendError(ws, 'MESSAGE_RATE_LIMIT', message.operationId);
+        const checkpoint = this.room.checkpoint();
+        const previousMeta = this.copyMeta(meta);
         meta.lastExpressionAt = now;
         meta.expression = { text, time: now, expiresAt: now + 8000 };
-        this.scheduleExpressionExpiry(ws, meta);
         this.updateMembers();
-        this.broadcastExpression(meta, message.operationId);
-        this.broadcastState(message.operationId, meta.senderId, false, false, TYPES.MESSAGE_SEND);
+        const expression = this.prepareExpressionBroadcast(meta, message.operationId);
+        const state = this.prepareStateBroadcast(message.operationId, meta.senderId, false, false, TYPES.MESSAGE_SEND);
+        if (!expression.ok || !state.ok) {
+          this.restoreMeta(meta, previousMeta);
+          this.room.restore(checkpoint);
+          this.sendError(ws, 'STATE_PAYLOAD_TOO_LARGE', message.operationId);
+          return;
+        }
+        this.scheduleExpressionExpiry(ws, meta);
+        this.broadcastPrepared(expression);
+        this.broadcastPrepared(state);
         return;
       }
+      const checkpoint = this.room.checkpoint();
       const result = this.room.apply(message);
       if (result.error) {
         this.trace('apply', { operationId: message.operationId, stateVersion: this.room.state.version, trackId: this.room.state.currentTrackId, action: message.type, result: result.error });
         return this.sendError(ws, result.error, message.operationId);
       }
       this.trace('apply', { operationId: message.operationId, stateVersion: this.room.state.version, trackId: this.room.state.currentTrackId, action: message.type, result: result.duplicate ? 'duplicate' : (result.changed ? 'changed' : 'unchanged') });
-      if (result.go) this.broadcastGo(message.operationId, meta.senderId);
-      else this.broadcastState(message.operationId, meta.senderId, result.duplicate, false, message.type);
+      const prepared = result.go
+        ? this.prepareGoBroadcast(message.operationId, meta.senderId)
+        : this.prepareStateBroadcast(message.operationId, meta.senderId, result.duplicate, false, message.type);
+      if (!prepared.ok) {
+        this.room.restore(checkpoint);
+        this.sendError(ws, 'STATE_PAYLOAD_TOO_LARGE', message.operationId);
+        return;
+      }
+      this.broadcastPrepared(prepared);
     });
     ws.on('close', () => {
       this.connections.delete(ws);
@@ -291,6 +340,17 @@ class RoomService {
         else this.broadcastState('', 'server', false, false, TYPES.PRESENCE);
       }
     });
+  }
+
+  rejectSameAccount(ws, identity, operationId) {
+    if (identity.platform === 'none' || !identity.uid) return false;
+    const peers = [...this.clients.entries()].filter(([socket, member]) => socket !== ws && member.platform === identity.platform && member.uid === identity.uid);
+    if (!peers.length) return false;
+    const sockets = [ws, ...peers.map(([socket]) => socket)];
+    // Send both errors before closing either socket; never admit the conflicting member.
+    sockets.forEach(socket => this.sendError(socket, 'SAME_MUSIC_ACCOUNT', operationId));
+    sockets.forEach(socket => socket.close(4003, 'SAME_MUSIC_ACCOUNT'));
+    return true;
   }
 
   updateMembers() { return this.room.setMembers([...this.clients.values()]); }
@@ -312,6 +372,18 @@ class RoomService {
     return 'default:signal';
   }
 
+  copyMeta(meta) {
+    return {
+      ...meta,
+      expression: meta.expression ? { ...meta.expression } : null,
+    };
+  }
+
+  restoreMeta(meta, snapshot) {
+    for (const key of Object.keys(meta)) delete meta[key];
+    Object.assign(meta, snapshot);
+  }
+
   scheduleExpressionExpiry(ws, meta) {
     if (this.expressionTimers.has(ws)) clearTimeout(this.expressionTimers.get(ws));
     const expectedExpiry = meta.expression.expiresAt;
@@ -327,7 +399,7 @@ class RoomService {
 
   sendError(ws, code, operationId = '') {
     if (ws.readyState !== OPEN) return;
-    ws.send(JSON.stringify(this.envelope(TYPES.ERROR, operationId, { code })));
+    this.sendEnvelope(ws, this.envelope(TYPES.ERROR, operationId, { code }));
   }
 
   envelope(action, operationId, payload, source = 'remote') {
@@ -347,30 +419,45 @@ class RoomService {
     };
   }
 
-  broadcastState(operationId = '', senderId = 'server', duplicate = false, progressSnapshot = false, causeAction = '') {
+  sendEnvelope(ws, envelope) {
+    const prepared = inspectJsonPayload(envelope);
+    if (!prepared.ok) {
+      this.trace('send', { action: envelope && envelope.type, result: prepared.code, bytes: prepared.bytes });
+      return false;
+    }
+    try {
+      const accepted = ws.send(prepared.text, (error) => {
+        if (error) this.trace('send', { action: envelope.type, result: error.code || error.message || 'SEND_FAILED' });
+      });
+      if (accepted === false) this.trace('send', { action: envelope.type, result: 'SEND_NOT_ACCEPTED' });
+      return accepted !== false;
+    } catch (error) {
+      this.trace('send', { action: envelope.type, result: error.code || error.message || 'SEND_FAILED' });
+      return false;
+    }
+  }
+
+  prepareStateBroadcast(operationId = '', senderId = 'server', duplicate = false, progressSnapshot = false, causeAction = '') {
     const normalizedCause = String(causeAction || this.room.state.lastAction || '');
-    const message = JSON.stringify(this.envelope(TYPES.ROOM_STATE, operationId, {
+    return inspectJsonPayload(this.envelope(TYPES.ROOM_STATE, operationId, {
       state: this.room.snapshot(),
       acceptedSenderId: senderId,
       action: normalizedCause,
       causeAction: normalizedCause,
       duplicate: !!duplicate,
       progressSnapshot: !!progressSnapshot,
-    }));
-    this.trace('broadcast-state', { operationId, stateVersion: this.room.state.version, trackId: this.room.state.currentTrackId, action: normalizedCause, result: duplicate ? 'duplicate' : 'sent' });
-    for (const ws of this.clients.keys()) if (ws.readyState === OPEN) ws.send(message);
+    }), MAX_ROOM_BROADCAST_BYTES);
   }
 
-  broadcastGo(operationId = '', senderId = 'server') {
+  prepareGoBroadcast(operationId = '', senderId = 'server') {
     const state = this.room.snapshot();
-    const message = JSON.stringify(this.envelope(TYPES.GO, operationId, {
+    return inspectJsonPayload(this.envelope(TYPES.GO, operationId, {
         state,
         acceptedSenderId: senderId,
         action: state.lastAction,
         transitionId: state.transition ? state.transition.id : '',
         playAt: state.playAt,
-      }));
-    for (const ws of this.clients.keys()) if (ws.readyState === OPEN) ws.send(message);
+      }), MAX_ROOM_BROADCAST_BYTES);
   }
 
   trace(stage, data = {}) {
@@ -378,16 +465,51 @@ class RoomService {
     this.onTrace({ stage, time: Date.now(), ...data });
   }
 
-  broadcastExpression(meta, operationId = '') {
+  prepareExpressionBroadcast(meta, operationId = '') {
     const expression = meta.expression;
-    if (!expression) return;
-    const message = JSON.stringify(this.envelope(TYPES.MESSAGE_SEND, operationId, {
+    if (!expression) return { ok: false, code: 'EMPTY_EXPRESSION' };
+    return inspectJsonPayload(this.envelope(TYPES.MESSAGE_SEND, operationId, {
       userId: meta.senderId,
       text: expression.text,
       time: expression.time,
       expiresAt: expression.expiresAt,
     }));
-    for (const ws of this.clients.keys()) if (ws.readyState === OPEN) ws.send(message);
+  }
+
+  broadcastPrepared(prepared) {
+    for (const ws of this.clients.keys()) {
+      if (ws.readyState !== OPEN) continue;
+      try {
+        const accepted = ws.send(prepared.text, (error) => {
+          if (error) this.trace('send', { action: 'broadcast', result: error.code || error.message || 'SEND_FAILED' });
+        });
+        if (accepted === false) this.trace('send', { action: 'broadcast', result: 'SEND_NOT_ACCEPTED' });
+      } catch (error) {
+        this.trace('send', { action: 'broadcast', result: error.code || error.message || 'SEND_FAILED' });
+      }
+    }
+  }
+
+  broadcastState(operationId = '', senderId = 'server', duplicate = false, progressSnapshot = false, causeAction = '') {
+    const prepared = this.prepareStateBroadcast(operationId, senderId, duplicate, progressSnapshot, causeAction);
+    if (!prepared.ok) return false;
+    this.trace('broadcast-state', { operationId, stateVersion: this.room.state.version, trackId: this.room.state.currentTrackId, action: causeAction, result: duplicate ? 'duplicate' : 'sent' });
+    this.broadcastPrepared(prepared);
+    return true;
+  }
+
+  broadcastGo(operationId = '', senderId = 'server') {
+    const prepared = this.prepareGoBroadcast(operationId, senderId);
+    if (!prepared.ok) return false;
+    this.broadcastPrepared(prepared);
+    return true;
+  }
+
+  broadcastExpression(meta, operationId = '') {
+    const prepared = this.prepareExpressionBroadcast(meta, operationId);
+    if (!prepared.ok) return false;
+    this.broadcastPrepared(prepared);
+    return true;
   }
 
   async stop(reason = 'ROOM_CLOSED') {

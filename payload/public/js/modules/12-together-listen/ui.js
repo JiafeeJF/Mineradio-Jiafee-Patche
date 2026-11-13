@@ -3,6 +3,147 @@
 (function installTogetherListenUi() {
   if (!window.togetherListen) return;
   var bridge = window.togetherListen;
+  // Only public display fields cross the Together Listen bridge. Never return cookies/raw account data.
+  var accountApiCache = null;
+  var accountApiPending = null;
+  var accountApiControllers = new Set();
+  function readHostAccountSnapshot() {
+    // Retain display fields only: never copy cookies/tokens into module state.
+    function display(status) {
+      if (!status) return null;
+      var profile = status.profile || {};
+      var level = typeof providerVipLevel === 'function' ? providerVipLevel(status === (typeof loginStatus !== 'undefined' ? loginStatus : null) ? 'netease' : 'qq', status) : status.vipLevel;
+      return { loggedIn: status.loggedIn === true, userId: String(status.userId || status.uin || profile.userId || ''),
+        nickname: status.nickname || profile.nickname || status.name || '', avatar: status.avatar || status.avatarUrl || profile.avatarUrl || '',
+        isVip: status.isVip === true, isSvip: status.isSvip === true, vipType: status.vipType || profile.vipType || 0, vipLevel: level };
+    }
+    return { ne: display(typeof loginStatus !== 'undefined' ? loginStatus : null), qq: display(typeof qqLoginStatus !== 'undefined' ? qqLoginStatus : null) };
+  }
+  function normalizeLocalUserProfile(ne, qq) {
+    var account = ne && ne.loggedIn === true ? ne : qq && qq.loggedIn === true ? qq : null;
+    if (!account) return { platform: 'none', uid: '', name: '未登录用户', avatar: '', isVip: false };
+    var profile = account.profile || {};
+    var avatar = String(account.avatar || account.avatarUrl || profile.avatarUrl || '');
+    if (avatar.indexOf('//') === 0) avatar = 'https:' + avatar;
+    if (!/^https?:\/\//i.test(avatar)) avatar = '';
+    var platform = account === ne ? 'netease' : 'qq';
+    var membership = typeof providerVipLevel === 'function' ? providerVipLevel(platform, account) : (account.isSvip === true || account.vipLevel === 'svip' ? 'svip' : (account.isVip === true || Number(account.vipType || profile.vipType || 0) > 0 ? 'vip' : 'none'));
+    return {
+      platform: platform,
+      uid: String(account.userId || account.uin || profile.userId || '').trim(),
+      name: String(account.nickname || profile.nickname || account.name || '未登录用户').trim().slice(0, 42),
+      avatar: avatar,
+      isVip: membership !== 'none',
+      vipLevel: membership
+    };
+  }
+
+  async function readAccountEndpoint(path, fallback, requireIdentity) {
+    var controller = new AbortController();
+    accountApiControllers.add(controller);
+    var timer = setTimeout(function () { controller.abort(); }, 12000);
+    try {
+      // The host backend owns platform credentials. Only a same-origin status request is made here.
+      var response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+      if (!response.ok) throw new Error('ACCOUNT_HTTP_ERROR');
+      var info = await response.json();
+      if (!info || typeof info.loggedIn !== 'boolean' || info.error) throw new Error('ACCOUNT_STATUS_UNAVAILABLE');
+      if (requireIdentity && (info.statusPending || (!info.loggedIn && info.hasCookie))) throw new Error('ACCOUNT_STATUS_UNCONFIRMED');
+      return info;
+    } catch (_) {
+      if (requireIdentity) throw new Error('暂时无法确认音乐账号，请稍后重试连接');
+      // Temporary API failure must not clear a valid host account or request another login.
+      return fallback;
+    } finally { clearTimeout(timer); accountApiControllers.delete(controller); }
+  }
+  async function getLocalUserProfile(requireIdentity) {
+    var snapshot = readHostAccountSnapshot();
+    var snapshotKey = JSON.stringify(snapshot);
+    if (accountSyncClosed) { if (requireIdentity) throw new Error('账号检测已取消'); return normalizeLocalUserProfile(snapshot.ne, snapshot.qq); }
+    if (accountApiCache && (!requireIdentity || accountApiCache.verified) && accountApiCache.key === snapshotKey && Date.now() < accountApiCache.until) return accountApiCache.profile;
+    if (accountApiPending && accountApiPending.key === snapshotKey && (!requireIdentity || accountApiPending.verified)) return accountApiPending.promise;
+    var pending = { key: snapshotKey, verified: !!requireIdentity };
+    pending.promise = (async function () {
+      var results;
+      if (requireIdentity) {
+        var ne = await readAccountEndpoint('/api/login/status', null, true);
+        // Netease has priority; a slow/unavailable secondary platform must not delay it.
+        results = [ne, ne.loggedIn ? null : await readAccountEndpoint('/api/qq/login/status', null, true)];
+      } else {
+        results = await Promise.all([
+          readAccountEndpoint('/api/login/status', snapshot.ne),
+          readAccountEndpoint('/api/qq/login/status', snapshot.qq)
+        ]);
+      }
+      var current = readHostAccountSnapshot();
+      if (accountSyncClosed || JSON.stringify(current) !== snapshotKey) {
+        if (requireIdentity) throw new Error('登录状态发生变化，请重新连接');
+        return normalizeLocalUserProfile(current.ne, current.qq);
+      }
+      var profile = normalizeLocalUserProfile(results[0], results[1]);
+      accountApiCache = { key: snapshotKey, profile: profile, verified: !!requireIdentity, until: Date.now() + 60000 };
+      return profile;
+    })();
+    accountApiPending = pending;
+    try { return await pending.promise; }
+    finally { if (accountApiPending === pending) accountApiPending = null; }
+  }
+  var accountSyncPending = null;
+  var accountSyncKey = '';
+  var accountSyncClosed = false;
+  var accountAvatarRetryAt = 0;
+  var localAccountProfile = null;
+  var identitySyncKey = '';
+  async function syncAccountIdentity(fresh) {
+    // Admission must use the host's saved login session, never startup renderer defaults.
+    // Avatar fetching is deliberately outside this path; no credentials leave the host.
+    if (fresh) accountApiCache = null;
+    var profile = await getLocalUserProfile(true);
+    if (profile.platform !== 'none' && !profile.uid) throw new Error('已登录账号缺少用户 ID，请刷新登录状态后重试');
+    var key = profile.platform + ':' + profile.uid;
+    if (key === identitySyncKey) return;
+    var display = { platform: profile.platform, uid: profile.uid, name: profile.name, avatar: 'default:signal' };
+    if (state.profile && state.profile.platform === profile.platform && state.profile.uid === profile.uid) display.avatar = state.profile.avatar;
+    state.profile = await bridge.saveProfile(display);
+    accountSyncKey = '';
+    identitySyncKey = key;
+    var status = await bridge.getStatus();
+    if (status && status.connectionState === 'connected') await bridge.sendOperation('PRESENCE', display);
+  }
+  async function syncAccountProfile() {
+    if (accountSyncPending) return accountSyncPending;
+    accountSyncPending = (async function () {
+      var hostKey = JSON.stringify(readHostAccountSnapshot());
+      var profile = await getLocalUserProfile();
+      var key = JSON.stringify(profile);
+      if (accountSyncClosed || (key === accountSyncKey && (!accountAvatarRetryAt || Date.now() < accountAvatarRetryAt))) return;
+      var avatarFailed = false;
+      var avatar = 'default:signal';
+      if (profile.avatar) {
+        var abort = new AbortController();
+        var timeout = setTimeout(function () { abort.abort(); }, 4000);
+        try {
+          var response = await fetch(typeof avatarSrc === 'function' ? avatarSrc(profile.avatar) : '/api/cover?url=' + encodeURIComponent(profile.avatar), { credentials: 'omit', signal: abort.signal });
+          if (!response.ok) throw new Error('头像下载失败');
+          avatar = await compressAvatar(await response.blob());
+        } catch (_) {
+          avatarFailed = true;
+          setMessage('账号昵称已读取；头像暂不可用，使用默认头像。', 'error');
+        } finally { clearTimeout(timeout); }
+      }
+      // Discard a stale fetch if login/logout happened while the avatar was loading.
+      if (accountSyncClosed || JSON.stringify(readHostAccountSnapshot()) !== hostKey || JSON.stringify(await getLocalUserProfile()) !== key) return;
+      var display = { name: profile.name, avatar: avatar, platform: profile.platform, uid: profile.uid };
+      localAccountProfile = profile;
+      state.profile = await bridge.saveProfile(display);
+      var status = await bridge.getStatus();
+      if (status && status.connectionState === 'connected') await bridge.sendOperation('PRESENCE', display);
+      accountSyncKey = key;
+      accountAvatarRetryAt = avatarFailed ? Date.now() + 30000 : 0;
+      renderProfile();
+    })();
+    try { await accountSyncPending; } finally { accountSyncPending = null; }
+  }
   var state = { status: null, rooms: [], saved: [], probes: {}, busy: false, profile: null, selectedAvatar: 'default:signal' };
   var panel = document.getElementById('together-modal');
   var control = document.getElementById('together-control');
@@ -228,13 +369,19 @@
   function renderProfile() {
     var profile = state.profile || { name: 'Mineradio 听众', avatar: 'default:signal' };
     document.getElementById('together-profile-name').value = profile.name || '';
+    var badge = document.getElementById('together-profile-membership');
+    if (badge) {
+      badge.hidden = !(localAccountProfile && localAccountProfile.isVip);
+      badge.textContent = localAccountProfile && localAccountProfile.vipLevel === 'svip' ? 'SVIP' : 'VIP';
+    }
     state.selectedAvatar = profile.avatar || 'default:signal';
     renderAvatar(document.getElementById('together-profile-avatar'), state.selectedAvatar, profile.name);
     document.querySelectorAll('[data-avatar-preset]').forEach(function (button) { button.classList.toggle('is-selected', button.dataset.avatarPreset === state.selectedAvatar); });
   }
 
   function compressAvatar(file) {
-    var hasSupportedType = file && /^image\/(?:png|jpeg|webp)$/i.test(file.type || '');
+    // The host avatar proxy preserves NetEase's image/jpg MIME alias.
+    var hasSupportedType = file && /^image\/(?:png|jpe?g|webp)$/i.test(file.type || '');
     var hasSupportedName = file && /\.(?:png|jpe?g|webp)$/i.test(file.name || '');
     if (!file || (!hasSupportedType && !hasSupportedName)) return Promise.reject(new Error('请选择 PNG、JPEG 或 WebP 图片'));
     if (file.size > 10 * 1024 * 1024) return Promise.reject(new Error('头像原图不能超过 10 MB'));
@@ -318,7 +465,12 @@
   }
 
   async function connectWithDiagnosis(address, options) {
+    await window.MineradioTogetherPlaybackController.prepareSession();
+    await syncAccountIdentity(true);
     try { return await bridge.connect(address, options); } catch (error) {
+      if (/SAME_MUSIC_ACCOUNT/.test(String(error && error.message || error))) {
+        throw new Error('检测到双方使用同一账号，无法一起听。请使用不同账号登录后再试。');
+      }
       try {
         var diagnosis = await bridge.diagnoseConnection(address, options);
         throw new Error(diagnosticText(diagnosis) + ' · ' + String(error && error.message || error));
@@ -415,18 +567,6 @@
     } finally { setBusy(false); }
   }
 
-  async function saveSelectedProfile() {
-    var nameInput = document.getElementById('together-profile-name');
-    var name = nameInput.value.trim() || (state.profile && state.profile.name) || 'Mineradio 听众';
-    state.profile = await bridge.saveProfile({ name: name, avatar: state.selectedAvatar });
-    state.selectedAvatar = state.profile.avatar;
-    renderProfile();
-    if (state.status && state.status.connectionState === 'connected') {
-      await bridge.sendOperation('PRESENCE', { name: state.profile.name, avatar: state.profile.avatar });
-    }
-    return state.profile;
-  }
-
   function savedConnectionOptions(item) {
     var addressInput = document.getElementById('together-address');
     var authorizationInput = document.getElementById('together-auth-code');
@@ -446,37 +586,15 @@
   document.addEventListener('click', function (event) { if (control.classList.contains('open') && !control.contains(event.target)) close(); });
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && control.classList.contains('open')) close(); });
   document.getElementById('together-create').addEventListener('click', function () { run(async function () {
+    await window.MineradioTogetherPlaybackController.prepareSession();
+    await syncAccountIdentity(true);
     var name = document.getElementById('together-create-name').value.trim();
     var portValue = document.getElementById('together-create-port').value.trim();
     state.status = await bridge.createRoom({ name: name, port: portValue === '' ? 0 : Number(portValue) });
   }); });
-  document.getElementById('together-profile-save').addEventListener('click', function () { run(async function () {
-    await saveSelectedProfile();
-    setMessage('联机资料已保存', 'ok');
-  }); });
-  document.querySelectorAll('[data-avatar-preset]').forEach(function (button) { button.addEventListener('click', function () { run(async function () {
-    state.selectedAvatar = button.dataset.avatarPreset;
-    await saveSelectedProfile();
-    setMessage('头像已保存', 'ok');
-  }); }); });
-  document.getElementById('together-profile-name').addEventListener('input', function (event) { renderAvatar(document.getElementById('together-profile-avatar'), state.selectedAvatar, event.target.value); });
-  function openAvatarPicker() { document.getElementById('together-avatar-file').click(); }
-  document.getElementById('together-profile-avatar').addEventListener('click', openAvatarPicker);
-  document.getElementById('together-local-presence-avatar').addEventListener('click', openAvatarPicker);
-  document.getElementById('together-avatar-upload').addEventListener('click', openAvatarPicker);
-  document.getElementById('together-avatar-file').addEventListener('change', function (event) {
-    var input = event.currentTarget; var file = input.files && input.files[0]; if (!file) return;
-    run(async function () {
-      try {
-        state.selectedAvatar = await compressAvatar(file);
-        await saveSelectedProfile();
-        setMessage('头像已压缩并保存', 'ok');
-      } finally { input.value = ''; }
-    });
-  });
   document.getElementById('together-connect').addEventListener('click', function () { run(async function () { state.status = await connectWithDiagnosis(connectionUrlFromInputs(), connectionOptions()); }); });
   document.getElementById('together-discover').addEventListener('click', function () { run(async function () { state.rooms = await bridge.discover(); renderRooms(); }); });
-  document.getElementById('together-leave').addEventListener('click', function () { run(async function () { state.status = await bridge.leave(!!(state.status && state.status.hosting)); }); });
+  document.getElementById('together-leave').addEventListener('click', function () { run(async function () { state.status = await window.MineradioTogetherPlaybackController.exitTogetherMode({ reason: 'manual', stopHost: !!(state.status && state.status.hosting) }); }); });
   document.getElementById('together-copy').addEventListener('click', function () { var value = document.getElementById('together-share-address').textContent; bridge.copyText(value); setMessage('连接地址已复制', 'ok'); });
   document.getElementById('together-copy-code').addEventListener('click', function () { var value = document.getElementById('together-host-auth-code').textContent; bridge.copyText(value); setMessage('6 位授权码已复制', 'ok'); });
   document.getElementById('together-save-current').addEventListener('click', function () { run(async function () {
@@ -498,7 +616,7 @@
   document.addEventListener('mineradio-together-state', function (event) { state.status = state.status || {}; state.status.connectionState = 'connected'; state.status.room = event.detail; flushPendingExpressions(); renderStatus(); });
   document.addEventListener('mineradio-together-error', function (event) {
     var code = String(event.detail.code || 'UNKNOWN_ERROR');
-    var labels = { MESSAGE_RATE_LIMIT: '发送太快，请稍后再说', MESSAGE_TOO_LONG: '文字不能超过 50 字', EMPTY_MESSAGE: '请输入文字', RECONNECT_EXHAUSTED: '重连 3 次失败，已清除当前连接' };
+    var labels = { MESSAGE_RATE_LIMIT: '发送太快，请稍后再说', MESSAGE_TOO_LONG: '文字不能超过 50 字', MESSAGE_TOO_LARGE: '本次操作数据过大，未发送到房间', EMPTY_MESSAGE: '请输入文字', SAME_MUSIC_ACCOUNT: '检测到双方使用同一账号，无法一起听。请使用不同账号登录后再试。', ACCOUNT_CHECK_UNSUPPORTED: '中转服务器不支持账号校验，请更新中转服务器后再连接。', RECONNECT_EXHAUSTED: '重连 3 次失败，已清除当前连接', STATE_PAYLOAD_TOO_LARGE: '房间数据已达到同步上限，本次操作未生效' };
     var message = labels[code] || ('联机错误：' + code);
     setMessage(message, 'error');
     if (labels[code] && typeof showToast === 'function') showToast(message);
@@ -528,5 +646,10 @@
     applyIncomingMessage(message);
     if (state.status && message.userId && message.userId !== state.status.clientId) playMessageTone();
   });
-  refresh();
+  // Poll host display state; account endpoint requests have a separate cache and timeout.
+  var accountTimer = setInterval(function () {
+    syncAccountIdentity().then(syncAccountProfile).catch(function (error) { setMessage('账号关联失败：' + String(error.message || error), 'error'); });
+  }, 1500);
+  window.addEventListener('pagehide', function () { accountSyncClosed = true; clearInterval(accountTimer); accountApiControllers.forEach(function (controller) { controller.abort(); }); }, { once: true });
+  refresh().then(syncAccountProfile).catch(function (error) { setMessage('账号关联失败：' + String(error.message || error), 'error'); });
 })();

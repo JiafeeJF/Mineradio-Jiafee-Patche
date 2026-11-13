@@ -1,0 +1,28 @@
+:root {
+  --muted: rgba(226, 235, 238, .76);
+  --faint: rgba(226, 235, 238, .58);
+}
+
+.metric-strip small,
+.metric-strip button,
+.topbar p,
+.section-head p,
+.settings-copy p,
+.log-toolbar p,
+.sidebar-foot small,
+.nav-item small,
+.check-list span,
+.listener span,
+.signal small,
+.room-note,
+.settings-footer,
+.form-grid label > span,
+.toggle-row > span small {
+  color: var(--muted);
+}
+
+.event-row time,
+.log-line time {
+  color: var(--faint);
+}
+

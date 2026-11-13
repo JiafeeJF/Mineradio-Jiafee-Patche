@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Mineradio 一起听中转控制台</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="contrast.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><div><strong>Mineradio</strong><span>中转控制台</span></div></div>
+      <nav aria-label="控制台导航">
+        <button class="nav-item is-active" data-view="overview"><span>总览</span><small>服务与连接</small></button>
+        <button class="nav-item" data-view="settings"><span>配置</span><small>监听与安全</small></button>
+        <button class="nav-item" data-view="logs"><span>运行日志</span><small>诊断与导出</small></button>
+      </nav>
+      <div class="sidebar-foot"><span>JIAFEE 开发</span><small>Relay Control 1.0.0</small></div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><h1 id="view-title">中转服务总览</h1><p id="view-copy">管理双人房间、连接入口和服务健康状态。</p></div>
+        <div class="service-actions">
+          <span class="service-badge" id="service-badge" data-state="stopped"><i></i><span>已停止</span></span>
+          <button class="button subtle" id="stop-service">停止</button>
+          <button class="button subtle" id="restart-service">重启</button>
+          <button class="button primary" id="start-service">启动服务</button>
+        </div>
+      </header>
+
+      <section class="view is-active" id="view-overview">
+        <div class="metric-strip">
+          <div><span>进程状态</span><strong id="metric-process">未运行</strong><small id="metric-pid">无活动进程</small></div>
+          <div><span>在线听众</span><strong id="metric-members">0 / 2</strong><small id="metric-room">等待服务启动</small></div>
+          <div><span>连接入口</span><strong class="endpoint" id="metric-endpoint">未配置</strong><button class="text-button" id="copy-endpoint">复制地址</button></div>
+          <div><span>运行时间</span><strong id="metric-uptime">00:00:00</strong><small id="metric-health">健康检查未运行</small></div>
+        </div>
+
+        <div class="overview-grid">
+          <section class="connection-panel" aria-labelledby="connection-heading">
+            <div class="section-head"><div><h2 id="connection-heading">当前房间</h2><p>服务只中转同步状态，不传输音乐音频。</p></div><span class="capacity" id="capacity-label">空闲</span></div>
+            <div class="listener-stage" id="listener-stage" data-members="0">
+              <div class="listener"><div class="avatar">A</div><strong>听众 A</strong><span>等待加入</span></div>
+              <div class="signal"><span></span><i></i><small id="signal-label">服务未运行</small></div>
+              <div class="listener"><div class="avatar">B</div><strong>听众 B</strong><span>等待加入</span></div>
+            </div>
+            <div class="room-note" id="room-note">启动服务后，双方使用相同地址和授权码加入。</div>
+          </section>
+
+          <aside class="quick-panel">
+            <div class="section-head"><div><h2>部署检查</h2><p>公网连接所需的外部配置。</p></div></div>
+            <ol class="check-list">
+              <li id="check-service"><i></i><div><strong>中转进程</strong><span>尚未启动</span></div></li>
+              <li id="check-endpoint"><i></i><div><strong>公开地址</strong><span>建议填写域名:端口</span></div></li>
+              <li id="check-firewall"><i></i><div><strong>Windows 防火墙</strong><span>复制命令后以管理员身份执行</span></div></li>
+            </ol>
+            <button class="button wide" id="copy-firewall">复制防火墙放行命令</button>
+          </aside>
+        </div>
+
+        <section class="event-band">
+          <div class="section-head"><div><h2>最近事件</h2><p>只显示服务生命周期和错误，不展示聊天内容或授权码。</p></div><button class="text-button" data-view-jump="logs">查看全部</button></div>
+          <div class="event-list" id="recent-events"><div class="empty-state">暂无运行事件</div></div>
+        </section>
+      </section>
+
+      <section class="view" id="view-settings">
+        <form id="settings-form" novalidate>
+          <section class="settings-section">
+            <div class="settings-copy"><h2>监听与公开入口</h2><p>监听地址决定本机绑定方式，公开地址只用于管理员复制和分发。</p></div>
+            <div class="form-grid">
+              <label class="wide"><span>房间名称</span><input id="room-name" name="roomName" maxlength="64" autocomplete="off"><small data-error="roomName"></small></label>
+              <label><span>监听地址</span><input id="host" name="host" spellcheck="false"><small data-error="host"></small></label>
+              <label><span>TCP 端口</span><input id="port" name="port" type="number" min="1" max="65535"><small data-error="port"></small></label>
+              <label class="wide"><span>公开地址（域名:端口）</span><input id="public-address" name="publicAddress" placeholder="music.example.com:17861" spellcheck="false"><small data-error="publicAddress"></small></label>
+            </div>
+          </section>
+          <section class="settings-section">
+            <div class="settings-copy"><h2>访问安全</h2><p>授权码使用 Windows DPAPI 加密保存，不写入日志或诊断文件。</p></div>
+            <div class="form-grid">
+              <label class="wide"><span>六位授权码</span><div class="field-action"><input id="authorization-code" inputmode="numeric" maxlength="6" type="password" placeholder="已安全保存"><button type="button" class="button compact" id="reveal-code">显示</button><button type="button" class="button compact" id="generate-code">重新生成</button></div><small data-error="authorizationCode"></small></label>
+              <label class="toggle-row wide"><span><strong>局域网免授权</strong><small>仅私网来源可跳过授权码；公网服务器建议关闭。</small></span><input type="checkbox" id="allow-lan"><i aria-hidden="true"></i></label>
+              <label class="toggle-row wide"><span><strong>调试日志</strong><small>记录协议动作与状态版本，不记录消息正文。</small></span><input type="checkbox" id="debug"><i aria-hidden="true"></i></label>
+            </div>
+          </section>
+          <section class="settings-section">
+            <div class="settings-copy"><h2>Windows 启动行为</h2><p>开机自启在用户登录后启动控制台，服务仍由本程序托管。</p></div>
+            <div class="form-grid">
+              <label class="toggle-row wide"><span><strong>登录 Windows 后自动运行</strong><small>注册到当前用户的登录启动项。</small></span><input type="checkbox" id="auto-start-app"><i aria-hidden="true"></i></label>
+              <label class="toggle-row wide"><span><strong>控制台启动后自动运行中转</strong><small>适合长期在线的 Windows 服务器。</small></span><input type="checkbox" id="auto-start-service"><i aria-hidden="true"></i></label>
+              <label class="toggle-row wide"><span><strong>异常退出自动恢复</strong><small>最多重试三次，正常停止不会重启。</small></span><input type="checkbox" id="restart-on-crash"><i aria-hidden="true"></i></label>
+              <label class="toggle-row wide"><span><strong>启动后最小化到托盘</strong><small>需要时双击托盘图标打开控制台。</small></span><input type="checkbox" id="start-minimized"><i aria-hidden="true"></i></label>
+            </div>
+          </section>
+          <div class="settings-footer"><span id="settings-message">修改后保存；运行中的服务需重启才会应用新配置。</span><button type="submit" class="button primary">保存配置</button></div>
+        </form>
+      </section>
+
+      <section class="view" id="view-logs">
+        <div class="log-toolbar"><div><h2>运行日志</h2><p>日志保存在本机用户数据目录，诊断导出会自动排除授权码。</p></div><div><button class="button subtle" id="open-data">打开数据目录</button><button class="button subtle" id="clear-logs">清空当前视图</button><button class="button" id="export-diagnostics">导出诊断</button></div></div>
+        <div class="log-console" id="log-console" role="log" aria-live="polite"><div class="empty-state">启动服务后将在这里显示日志</div></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
+

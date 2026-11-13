@@ -2,12 +2,13 @@
 
 const net = require('net');
 const { EventEmitter } = require('events');
+const { MAX_SERIALIZED_PAYLOAD_BYTES } = require('./payload-budget');
 
 const PROTOCOL = 'MINERADIO/1';
 const OPEN = 1;
 const CLOSING = 2;
 const CLOSED = 3;
-const DEFAULT_MAX_PAYLOAD = 64 * 1024;
+const DEFAULT_MAX_PAYLOAD = MAX_SERIALIZED_PAYLOAD_BYTES;
 
 class TcpFrameSocket extends EventEmitter {
   constructor(socket, options = {}) {
@@ -70,7 +71,14 @@ class TcpFrameSocket extends EventEmitter {
     }
     const header = Buffer.allocUnsafe(4);
     header.writeUInt32BE(payload.length, 0);
-    return this._socket.write(Buffer.concat([header, payload]), callback);
+    try {
+      // socket.write(false) reports backpressure; the bytes are still accepted.
+      this._socket.write(Buffer.concat([header, payload]), callback);
+      return true;
+    } catch (error) {
+      if (callback) callback(error);
+      return false;
+    }
   }
 
   close(code = 1000, reason = '') {
